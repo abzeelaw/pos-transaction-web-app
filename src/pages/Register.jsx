@@ -6,7 +6,6 @@ import {
   FiEyeOff,
   FiLock,
   FiMail,
-  FiShield,
   FiUser,
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
@@ -19,9 +18,13 @@ const Register = () => {
     name: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const [showPassword, setShowPassword] =
+    useState(false);
+
+  const [showConfirmPassword, setShowConfirmPassword] =
     useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -30,8 +33,8 @@ const Register = () => {
   const handleChange = (event) => {
     const { name, value } = event.target;
 
-    setFormData((previous) => ({
-      ...previous,
+    setFormData((current) => ({
+      ...current,
       [name]: value,
     }));
 
@@ -45,29 +48,28 @@ const Register = () => {
 
     setError("");
 
-    const name = formData.name.trim();
-    const email = formData.email.trim();
-    const password = formData.password;
-
-    if (!name) {
-      setError("Please enter your name.");
+    if (
+      !formData.name ||
+      !formData.email ||
+      !formData.password ||
+      !formData.confirmPassword
+    ) {
+      setError("Please complete all fields.");
       return;
     }
 
-    if (!email) {
-      setError("Please enter your email address.");
-      return;
-    }
-
-    if (!password) {
-      setError("Please create a password.");
-      return;
-    }
-
-    if (password.length < 6) {
+    if (formData.password.length < 6) {
       setError(
         "Password must be at least 6 characters."
       );
+      return;
+    }
+
+    if (
+      formData.password !==
+      formData.confirmPassword
+    ) {
+      setError("Passwords do not match.");
       return;
     }
 
@@ -75,14 +77,12 @@ const Register = () => {
       setLoading(true);
 
       await register(
-        name,
-        email,
-        password
+        formData.name,
+        formData.email,
+        formData.password
       );
 
-      navigate("/dashboard", {
-        replace: true,
-      });
+      navigate("/dashboard");
     } catch (error) {
       console.error(
         "Registration error:",
@@ -91,7 +91,7 @@ const Register = () => {
 
       setError(
         error.response?.data?.message ||
-          "Unable to create your account."
+          "Unable to create account. Please try again."
       );
     } finally {
       setLoading(false);
@@ -101,9 +101,9 @@ const Register = () => {
   return (
     <div className="auth-page">
 
-      {/* LEFT */}
+      <div className="auth-container">
 
-      <div className="auth-brand-panel">
+        {/* Brand */}
 
         <div className="auth-brand">
 
@@ -117,70 +117,27 @@ const Register = () => {
 
         </div>
 
-        <div className="auth-brand-content">
 
-          <div className="auth-icon">
-            <FiShield />
-          </div>
+        {/* Card */}
 
-          <p className="auth-eyebrow">
-            BUILT FOR POS AGENTS
-          </p>
+        <div className="auth-card">
 
-          <h1>
-            Move from paper
-            <span>
-              to digital records.
-            </span>
-          </h1>
+          {/* Header */}
 
-          <p>
-            Keep every sale organized,
-            calculate your totals automatically
-            and access your records whenever
-            you need them.
-          </p>
+          <div className="auth-header">
 
-        </div>
-
-        <div className="auth-footer-text">
-          © 2026 POS Tracker
-        </div>
-
-      </div>
-
-
-      {/* RIGHT */}
-
-      <div className="auth-form-panel">
-
-        <div className="auth-form-container">
-
-          <div className="mobile-auth-brand">
-
-            <div className="brand-mark">
-              P
-            </div>
-
-            <span>
-              POS Tracker
-            </span>
-
-          </div>
-
-          <div className="auth-form-header">
-
-            <h2>
+            <h1>
               Create your account
-            </h2>
+            </h1>
 
             <p>
-              Start recording your POS
-              transactions today.
+              Start managing your POS sales today.
             </p>
 
           </div>
 
+
+          {/* Error */}
 
           {error && (
             <div className="auth-error">
@@ -189,12 +146,14 @@ const Register = () => {
           )}
 
 
+          {/* Form */}
+
           <form
             className="auth-form"
             onSubmit={handleSubmit}
           >
 
-            {/* NAME */}
+            {/* Name */}
 
             <div className="form-group">
 
@@ -202,7 +161,7 @@ const Register = () => {
                 Full name
               </label>
 
-              <div className="input-wrapper">
+              <div className="auth-input-wrapper">
 
                 <FiUser />
 
@@ -210,11 +169,11 @@ const Register = () => {
                   id="name"
                   name="name"
                   type="text"
-                  placeholder="Enter your name"
+                  placeholder="Enter your full name"
                   value={formData.name}
                   onChange={handleChange}
-                  disabled={loading}
                   autoComplete="name"
+                  disabled={loading}
                 />
 
               </div>
@@ -222,7 +181,7 @@ const Register = () => {
             </div>
 
 
-            {/* EMAIL */}
+            {/* Email */}
 
             <div className="form-group">
 
@@ -230,7 +189,7 @@ const Register = () => {
                 Email address
               </label>
 
-              <div className="input-wrapper">
+              <div className="auth-input-wrapper">
 
                 <FiMail />
 
@@ -241,8 +200,8 @@ const Register = () => {
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={handleChange}
-                  disabled={loading}
                   autoComplete="email"
+                  disabled={loading}
                 />
 
               </div>
@@ -250,7 +209,7 @@ const Register = () => {
             </div>
 
 
-            {/* PASSWORD */}
+            {/* Password */}
 
             <div className="form-group">
 
@@ -258,7 +217,7 @@ const Register = () => {
                 Password
               </label>
 
-              <div className="input-wrapper">
+              <div className="auth-input-wrapper">
 
                 <FiLock />
 
@@ -270,11 +229,11 @@ const Register = () => {
                       ? "text"
                       : "password"
                   }
-                  placeholder="At least 6 characters"
+                  placeholder="Minimum 6 characters"
                   value={formData.password}
                   onChange={handleChange}
-                  disabled={loading}
                   autoComplete="new-password"
+                  disabled={loading}
                 />
 
                 <button
@@ -282,10 +241,15 @@ const Register = () => {
                   className="password-toggle"
                   onClick={() =>
                     setShowPassword(
-                      (previous) =>
-                        !previous
+                      (current) => !current
                     )
                   }
+                  aria-label={
+                    showPassword
+                      ? "Hide password"
+                      : "Show password"
+                  }
+                  disabled={loading}
                 >
                   {showPassword ? (
                     <FiEyeOff />
@@ -299,20 +263,80 @@ const Register = () => {
             </div>
 
 
-            {/* SUBMIT */}
+            {/* Confirm password */}
+
+            <div className="form-group">
+
+              <label htmlFor="confirmPassword">
+                Confirm password
+              </label>
+
+              <div className="auth-input-wrapper">
+
+                <FiLock />
+
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={
+                    showConfirmPassword
+                      ? "text"
+                      : "password"
+                  }
+                  placeholder="Confirm your password"
+                  value={
+                    formData.confirmPassword
+                  }
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                  disabled={loading}
+                />
+
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() =>
+                    setShowConfirmPassword(
+                      (current) => !current
+                    )
+                  }
+                  aria-label={
+                    showConfirmPassword
+                      ? "Hide password"
+                      : "Show password"
+                  }
+                  disabled={loading}
+                >
+                  {showConfirmPassword ? (
+                    <FiEyeOff />
+                  ) : (
+                    <FiEye />
+                  )}
+                </button>
+
+              </div>
+
+            </div>
+
+
+            {/* Submit */}
 
             <button
               type="submit"
-              className="auth-submit-button"
+              className="primary-button auth-submit"
               disabled={loading}
             >
 
-              {loading
-                ? "Creating account..."
-                : "Create account"}
-
-              {!loading && (
-                <FiArrowRight />
+              {loading ? (
+                <>
+                  <span className="button-spinner" />
+                  Creating account...
+                </>
+              ) : (
+                <>
+                  Create account
+                  <FiArrowRight />
+                </>
               )}
 
             </button>
@@ -320,10 +344,12 @@ const Register = () => {
           </form>
 
 
-          <div className="auth-switch">
+          {/* Footer */}
+
+          <div className="auth-footer">
 
             <span>
-              Already have an account?
+              Already have an account?{" "}
             </span>
 
             <Link to="/login">
@@ -333,6 +359,13 @@ const Register = () => {
           </div>
 
         </div>
+
+
+        {/* Bottom text */}
+
+        <p className="auth-copyright">
+          POS Tracker · Sales management made simple
+        </p>
 
       </div>
 

@@ -1,3 +1,4 @@
+import toast from "react-hot-toast";
 import { useEffect, useMemo, useState } from "react";
 import {
   FiEdit2,
@@ -153,16 +154,17 @@ const Transactions = () => {
       );
 
       setDeletingTransaction(null);
+      toast.success("Transaction deleted successfully");
     } catch (error) {
       console.error(
         "Failed to delete transaction:",
         error
       );
 
-      alert(
-        error.response?.data?.message ||
-          "Unable to delete transaction."
-      );
+      toast.error(
+  error.response?.data?.message ||
+    "Unable to delete transaction."
+);
     } finally {
       setDeleteLoading(false);
     }

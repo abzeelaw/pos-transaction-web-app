@@ -6,7 +6,6 @@ import {
   FiEyeOff,
   FiLock,
   FiMail,
-  FiShield,
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 
@@ -19,17 +18,15 @@ const Login = () => {
     password: "",
   });
 
-  const [showPassword, setShowPassword] =
-    useState(false);
-
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleChange = (event) => {
     const { name, value } = event.target;
 
-    setFormData((previous) => ({
-      ...previous,
+    setFormData((current) => ({
+      ...current,
       [name]: value,
     }));
 
@@ -43,13 +40,8 @@ const Login = () => {
 
     setError("");
 
-    if (!formData.email.trim()) {
-      setError("Please enter your email address.");
-      return;
-    }
-
-    if (!formData.password) {
-      setError("Please enter your password.");
+    if (!formData.email || !formData.password) {
+      setError("Please enter your email and password.");
       return;
     }
 
@@ -57,19 +49,17 @@ const Login = () => {
       setLoading(true);
 
       await login(
-        formData.email.trim(),
+        formData.email,
         formData.password
       );
 
-      navigate("/dashboard", {
-        replace: true,
-      });
+      navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
 
       setError(
         error.response?.data?.message ||
-          "Unable to sign in. Please check your details."
+          "Unable to login. Please check your details."
       );
     } finally {
       setLoading(false);
@@ -79,9 +69,9 @@ const Login = () => {
   return (
     <div className="auth-page">
 
-      {/* LEFT SIDE */}
+      <div className="auth-container">
 
-      <div className="auth-brand-panel">
+        {/* Brand */}
 
         <div className="auth-brand">
 
@@ -95,68 +85,27 @@ const Login = () => {
 
         </div>
 
-        <div className="auth-brand-content">
 
-          <div className="auth-icon">
-            <FiShield />
-          </div>
+        {/* Card */}
 
-          <p className="auth-eyebrow">
-            SIMPLE • SECURE • SMART
-          </p>
+        <div className="auth-card">
 
-          <h1>
-            Keep your POS
-            <span>
-              transactions organized.
-            </span>
-          </h1>
+          {/* Header */}
 
-          <p>
-            Record sales, track revenue and
-            understand your business from
-            one simple dashboard.
-          </p>
+          <div className="auth-header">
 
-        </div>
-
-        <div className="auth-footer-text">
-          © 2026 POS Tracker
-        </div>
-
-      </div>
-
-
-      {/* RIGHT SIDE */}
-
-      <div className="auth-form-panel">
-
-        <div className="auth-form-container">
-
-          <div className="mobile-auth-brand">
-
-            <div className="brand-mark">
-              P
-            </div>
-
-            <span>
-              POS Tracker
-            </span>
-
-          </div>
-
-          <div className="auth-form-header">
-
-            <h2>
+            <h1>
               Welcome back
-            </h2>
+            </h1>
 
             <p>
-              Sign in to manage your transactions.
+              Sign in to manage your POS transactions.
             </p>
 
           </div>
 
+
+          {/* Error */}
 
           {error && (
             <div className="auth-error">
@@ -165,12 +114,14 @@ const Login = () => {
           )}
 
 
+          {/* Form */}
+
           <form
             className="auth-form"
             onSubmit={handleSubmit}
           >
 
-            {/* EMAIL */}
+            {/* Email */}
 
             <div className="form-group">
 
@@ -178,7 +129,7 @@ const Login = () => {
                 Email address
               </label>
 
-              <div className="input-wrapper">
+              <div className="auth-input-wrapper">
 
                 <FiMail />
 
@@ -189,8 +140,8 @@ const Login = () => {
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={handleChange}
-                  disabled={loading}
                   autoComplete="email"
+                  disabled={loading}
                 />
 
               </div>
@@ -198,19 +149,15 @@ const Login = () => {
             </div>
 
 
-            {/* PASSWORD */}
+            {/* Password */}
 
             <div className="form-group">
 
-              <div className="form-label-row">
+              <label htmlFor="password">
+                Password
+              </label>
 
-                <label htmlFor="password">
-                  Password
-                </label>
-
-              </div>
-
-              <div className="input-wrapper">
+              <div className="auth-input-wrapper">
 
                 <FiLock />
 
@@ -225,8 +172,8 @@ const Login = () => {
                   placeholder="Enter your password"
                   value={formData.password}
                   onChange={handleChange}
-                  disabled={loading}
                   autoComplete="current-password"
+                  disabled={loading}
                 />
 
                 <button
@@ -234,8 +181,7 @@ const Login = () => {
                   className="password-toggle"
                   onClick={() =>
                     setShowPassword(
-                      (previous) =>
-                        !previous
+                      (current) => !current
                     )
                   }
                   aria-label={
@@ -243,6 +189,7 @@ const Login = () => {
                       ? "Hide password"
                       : "Show password"
                   }
+                  disabled={loading}
                 >
                   {showPassword ? (
                     <FiEyeOff />
@@ -256,20 +203,24 @@ const Login = () => {
             </div>
 
 
-            {/* SUBMIT */}
+            {/* Submit */}
 
             <button
               type="submit"
-              className="auth-submit-button"
+              className="primary-button auth-submit"
               disabled={loading}
             >
 
-              {loading
-                ? "Signing in..."
-                : "Sign in"}
-
-              {!loading && (
-                <FiArrowRight />
+              {loading ? (
+                <>
+                  <span className="button-spinner" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  Sign in
+                  <FiArrowRight />
+                </>
               )}
 
             </button>
@@ -277,19 +228,28 @@ const Login = () => {
           </form>
 
 
-          <div className="auth-switch">
+          {/* Footer */}
+
+          <div className="auth-footer">
 
             <span>
-              Don't have an account?
+              Don't have an account?{" "}
             </span>
 
             <Link to="/register">
-              Create one
+              Create an account
             </Link>
 
           </div>
 
         </div>
+
+
+        {/* Bottom text */}
+
+        <p className="auth-copyright">
+          POS Tracker · Sales management made simple
+        </p>
 
       </div>
 

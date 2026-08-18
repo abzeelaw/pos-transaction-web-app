@@ -1,17 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  FiDollarSign,
-  FiHash,
-  FiPackage,
-  FiSave,
   FiX,
+  FiShoppingBag,
+  FiCheck,
   FiCreditCard,
+  FiHash,
+  FiDollarSign,
   FiAlertCircle,
 } from "react-icons/fi";
 import api from "../services/api";
 
 const TransactionModal = ({
-  transaction = null,
+  transaction,
   onClose,
   onSuccess,
 }) => {
@@ -27,9 +27,6 @@ const TransactionModal = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  /*
-   * Populate form when editing
-   */
   useEffect(() => {
     if (transaction) {
       setFormData({
@@ -39,33 +36,16 @@ const TransactionModal = ({
         paymentMethod:
           transaction.paymentMethod || "cash",
       });
+    } else {
+      setFormData({
+        productName: "",
+        quantity: "",
+        unitPrice: "",
+        paymentMethod: "cash",
+      });
     }
   }, [transaction]);
 
-  /*
-   * Calculate total
-   */
-  const totalAmount = useMemo(() => {
-    const quantity = Number(formData.quantity) || 0;
-    const unitPrice = Number(formData.unitPrice) || 0;
-
-    return quantity * unitPrice;
-  }, [formData.quantity, formData.unitPrice]);
-
-  /*
-   * Currency formatter
-   */
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  /*
-   * Handle input changes
-   */
   const handleChange = (event) => {
     const { name, value } = event.target;
 
@@ -79,23 +59,28 @@ const TransactionModal = ({
     }
   };
 
-  /*
-   * Submit
-   */
+  const totalAmount =
+    Number(formData.quantity || 0) *
+    Number(formData.unitPrice || 0);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency: "NGN",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
-
     setError("");
 
     const productName = formData.productName.trim();
     const quantity = Number(formData.quantity);
     const unitPrice = Number(formData.unitPrice);
 
-    /*
-     * Validation
-     */
     if (!productName) {
-      setError("Please enter a product name.");
+      setError("Please enter the product name.");
       return;
     }
 
@@ -141,14 +126,14 @@ const TransactionModal = ({
       }
 
       onSuccess();
-    } catch (requestError) {
+    } catch (err) {
       console.error(
         "Transaction save error:",
-        requestError
+        err
       );
 
       setError(
-        requestError.response?.data?.message ||
+        err.response?.data?.message ||
           "Unable to save transaction. Please try again."
       );
     } finally {
@@ -156,22 +141,16 @@ const TransactionModal = ({
     }
   };
 
-  /*
-   * Close when clicking overlay
-   */
-  const handleOverlayClick = (event) => {
-    if (
-      event.target === event.currentTarget &&
-      !loading
-    ) {
-      onClose();
-    }
-  };
-
   return (
     <div
       className="modal-overlay"
-      onMouseDown={handleOverlayClick}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          if (!loading) {
+            onClose();
+          }
+        }
+      }}
     >
       <div
         className="transaction-modal"
@@ -179,17 +158,20 @@ const TransactionModal = ({
         aria-modal="true"
         aria-labelledby="transaction-modal-title"
       >
-        {/* Header */}
 
-        <div className="modal-header">
+        {/* HEADER */}
+        <div className="transaction-modal-header">
 
-          <div className="modal-title-wrapper">
+          <div className="modal-title-group">
 
-            <div className="modal-title-icon">
-  <FiPackage />
-</div>
+            <div className="modal-icon">
+              <FiShoppingBag />
+            </div>
 
-            <div className="modal-header-content">
+            <div>
+              <span className="modal-eyebrow">
+                SALES MANAGEMENT
+              </span>
 
               <h2 id="transaction-modal-title">
                 {isEditing
@@ -202,203 +184,194 @@ const TransactionModal = ({
                   ? "Update the details of this sale."
                   : "Record a new POS sale."}
               </p>
-
             </div>
 
           </div>
 
           <button
             type="button"
-            className="modal-close"
+            className="modal-close-button"
             onClick={onClose}
             disabled={loading}
-            aria-label="Close modal"
+            aria-label="Close transaction modal"
           >
             <FiX />
           </button>
 
         </div>
 
-
-        {/* Form */}
-
+        {/* FORM */}
         <form
           className="transaction-form"
           onSubmit={handleSubmit}
         >
 
-          <div className="modal-body">
+          {/* ERROR */}
+          {error && (
+            <div className="form-error">
+              <FiAlertCircle />
+              <span>{error}</span>
+            </div>
+          )}
 
-            {error && (
-              <div className="form-error">
-                <FiAlertCircle />
+          {/* PRODUCT NAME */}
+          <div className="form-group">
 
-                <span>
-                  {error}
-                </span>
-              </div>
-            )}
+            <label htmlFor="productName">
+              Product Name
+            </label>
 
+            <div className="input-with-icon">
 
-            {/* Product */}
+              <FiShoppingBag />
+
+              <input
+                id="productName"
+                name="productName"
+                type="text"
+                placeholder="e.g. Maltina"
+                value={formData.productName}
+                onChange={handleChange}
+                disabled={loading}
+                autoFocus
+              />
+
+            </div>
+
+          </div>
+
+          {/* QUANTITY + PRICE */}
+          <div className="form-row">
 
             <div className="form-group">
 
-              <label htmlFor="productName">
-                Product name
+              <label htmlFor="quantity">
+                Quantity
               </label>
 
-              <div className="input-wrapper">
+              <div className="input-with-icon">
 
-                <FiPackage />
+                <FiHash />
 
                 <input
-                  id="productName"
-                  name="productName"
-                  type="text"
-                  placeholder="e.g. Maltina"
-                  value={formData.productName}
+                  id="quantity"
+                  name="quantity"
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="0"
+                  value={formData.quantity}
                   onChange={handleChange}
                   disabled={loading}
-                  autoComplete="off"
                 />
 
               </div>
 
             </div>
 
-
-            {/* Quantity + Price */}
-
-            <div className="form-row">
-
-              <div className="form-group">
-
-                <label htmlFor="quantity">
-                  Quantity
-                </label>
-
-                <div className="input-wrapper">
-
-                  <FiHash />
-
-                  <input
-                    id="quantity"
-                    name="quantity"
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="0"
-                    value={formData.quantity}
-                    onChange={handleChange}
-                    disabled={loading}
-                  />
-
-                </div>
-
-              </div>
-
-
-              <div className="form-group">
-
-                <label htmlFor="unitPrice">
-                  Unit price
-                </label>
-
-                <div className="input-wrapper">
-
-                  <FiDollarSign />
-
-                  <input
-                    id="unitPrice"
-                    name="unitPrice"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    value={formData.unitPrice}
-                    onChange={handleChange}
-                    disabled={loading}
-                  />
-
-                </div>
-
-              </div>
-
-            </div>
-
-
-            {/* Payment */}
-
             <div className="form-group">
 
-              <label htmlFor="paymentMethod">
-                Payment method
+              <label htmlFor="unitPrice">
+                Unit Price
               </label>
 
-              <div className="input-wrapper">
+              <div className="currency-input">
 
-                <FiCreditCard />
-
-                <select
-                  id="paymentMethod"
-                  name="paymentMethod"
-                  value={formData.paymentMethod}
-                  onChange={handleChange}
-                  disabled={loading}
-                >
-                  <option value="cash">
-                    Cash
-                  </option>
-
-                  <option value="transfer">
-                    Bank Transfer
-                  </option>
-
-                  <option value="pos">
-                    POS
-                  </option>
-
-                </select>
-
-              </div>
-
-            </div>
-
-
-            {/* Total */}
-
-            <div className="transaction-total">
-
-              <div>
-                <span>
-                  Total amount
+                <span className="currency-symbol">
+                  ₦
                 </span>
 
-                <small>
-                  {formData.quantity || 0} ×{" "}
-                  {formatCurrency(
-                    Number(formData.unitPrice) || 0
-                  )}
-                </small>
-              </div>
+                <input
+                  id="unitPrice"
+                  name="unitPrice"
+                  type="number"
+                  min="0"
+                  step="50"
+                  placeholder="0"
+                  value={formData.unitPrice}
+                  onChange={handleChange}
+                  disabled={loading}
+                />
 
-              <strong>
-                {formatCurrency(totalAmount)}
-              </strong>
+              </div>
 
             </div>
 
           </div>
 
+          {/* PAYMENT METHOD */}
+          <div className="form-group">
 
-          {/* Footer */}
+            <label htmlFor="paymentMethod">
+              Payment Method
+            </label>
 
-          <div className="modal-footer">
+            <div className="select-with-icon">
+
+              <FiCreditCard />
+
+              <select
+                id="paymentMethod"
+                name="paymentMethod"
+                value={formData.paymentMethod}
+                onChange={handleChange}
+                disabled={loading}
+              >
+                <option value="cash">
+                  Cash
+                </option>
+
+                <option value="transfer">
+                  Bank Transfer
+                </option>
+
+                <option value="pos">
+                  POS
+                </option>
+              </select>
+
+            </div>
+
+          </div>
+
+          {/* TOTAL */}
+          <div className="transaction-total">
+
+            <div className="total-left">
+
+              <div className="total-icon">
+                <FiDollarSign />
+              </div>
+
+              <div>
+                <span>
+                  Total Amount
+                </span>
+
+                <small>
+                  {formData.quantity || 0} ×{" "}
+                  {formatCurrency(
+                    Number(
+                      formData.unitPrice || 0
+                    )
+                  )}
+                </small>
+              </div>
+
+            </div>
+
+            <strong>
+              {formatCurrency(totalAmount)}
+            </strong>
+
+          </div>
+
+          {/* ACTIONS */}
+          <div className="modal-actions">
 
             <button
               type="button"
-              className="secondary-button"
+              className="secondary-button modal-cancel"
               onClick={onClose}
               disabled={loading}
             >
@@ -407,7 +380,7 @@ const TransactionModal = ({
 
             <button
               type="submit"
-              className="primary-button modal-submit"
+              className="primary-button modal-save"
               disabled={loading}
             >
 
@@ -418,7 +391,7 @@ const TransactionModal = ({
                 </>
               ) : (
                 <>
-                  <FiSave />
+                  <FiCheck />
                   {isEditing
                     ? "Update Transaction"
                     : "Save Transaction"}
@@ -430,12 +403,9 @@ const TransactionModal = ({
           </div>
 
         </form>
-
       </div>
     </div>
   );
 };
-
-
 
 export default TransactionModal;
