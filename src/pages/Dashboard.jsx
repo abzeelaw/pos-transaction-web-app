@@ -19,12 +19,6 @@ const Dashboard = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  /*
-  ========================================
-  FETCH TRANSACTIONS
-  ========================================
-  */
-
   const fetchTransactions = async () => {
     try {
       setLoading(true);
@@ -50,17 +44,11 @@ const Dashboard = () => {
 
   /*
   ========================================
-  DATE
+  TODAY
   ========================================
   */
 
   const today = new Date();
-
-  /*
-  ========================================
-  TODAY'S TRANSACTIONS
-  ========================================
-  */
 
   const todaysTransactions = useMemo(() => {
     return transactions.filter((transaction) => {
@@ -68,15 +56,13 @@ const Dashboard = () => {
         return false;
       }
 
-      const transactionDate =
+      const date =
         new Date(transaction.createdAt);
 
       return (
-        transactionDate.getDate() ===
-          today.getDate() &&
-        transactionDate.getMonth() ===
-          today.getMonth() &&
-        transactionDate.getFullYear() ===
+        date.getDate() === today.getDate() &&
+        date.getMonth() === today.getMonth() &&
+        date.getFullYear() ===
           today.getFullYear()
       );
     });
@@ -114,6 +100,62 @@ const Dashboard = () => {
 
   /*
   ========================================
+  PAYMENT BREAKDOWN
+  ========================================
+  */
+
+  const paymentBreakdown = useMemo(() => {
+    const breakdown = {
+      cash: {
+        count: 0,
+        amount: 0,
+      },
+
+      transfer: {
+        count: 0,
+        amount: 0,
+      },
+
+      pos: {
+        count: 0,
+        amount: 0,
+      },
+    };
+
+    transactions.forEach((transaction) => {
+      const method =
+        transaction.paymentMethod;
+
+      if (breakdown[method]) {
+        breakdown[method].count += 1;
+
+        breakdown[method].amount +=
+          Number(
+            transaction.totalAmount || 0
+          );
+      }
+    });
+
+    return breakdown;
+  }, [transactions]);
+
+  /*
+  ========================================
+  MAX PAYMENT AMOUNT
+  ========================================
+  */
+
+  const maxPaymentAmount = useMemo(() => {
+    return Math.max(
+      paymentBreakdown.cash.amount,
+      paymentBreakdown.transfer.amount,
+      paymentBreakdown.pos.amount,
+      1
+    );
+  }, [paymentBreakdown]);
+
+  /*
+  ========================================
   RECENT TRANSACTIONS
   ========================================
   */
@@ -130,7 +172,7 @@ const Dashboard = () => {
 
   /*
   ========================================
-  CURRENCY FORMAT
+  CURRENCY
   ========================================
   */
 
@@ -144,14 +186,12 @@ const Dashboard = () => {
 
   /*
   ========================================
-  DATE FORMAT
+  DATE
   ========================================
   */
 
   const formatDate = (date) => {
-    if (!date) {
-      return "-";
-    }
+    if (!date) return "-";
 
     return new Date(date).toLocaleDateString(
       "en-NG",
@@ -170,9 +210,7 @@ const Dashboard = () => {
   */
 
   const formatPaymentMethod = (method) => {
-    if (!method) {
-      return "-";
-    }
+    if (!method) return "-";
 
     return (
       method.charAt(0).toUpperCase() +
@@ -180,25 +218,10 @@ const Dashboard = () => {
     );
   };
 
-  /*
-  ========================================
-  UI
-  ========================================
-  */
-
   return (
     <div className="dashboard-layout">
 
-      {/* =================================
-          SIDEBAR
-      ================================= */}
-
       <Sidebar />
-
-
-      {/* =================================
-          MAIN CONTENT
-      ================================= */}
 
       <main className="dashboard-main">
 
@@ -219,19 +242,17 @@ const Dashboard = () => {
             </h1>
 
             <p className="header-description">
-              Here's what's happening with your
-              sales today.
+              Here's what's happening with
+              your sales today.
             </p>
 
           </div>
-
 
           <Link
             to="/transactions"
             className="primary-button"
           >
             <FiPlus />
-
             <span>
               New Transaction
             </span>
@@ -245,8 +266,6 @@ const Dashboard = () => {
         ================================= */}
 
         <section className="stats-grid">
-
-          {/* TODAY'S SALES */}
 
           <div className="stat-card">
 
@@ -283,8 +302,6 @@ const Dashboard = () => {
           </div>
 
 
-          {/* TOTAL TRANSACTIONS */}
-
           <div className="stat-card">
 
             <div className="stat-icon">
@@ -311,8 +328,6 @@ const Dashboard = () => {
 
           </div>
 
-
-          {/* TOTAL REVENUE */}
 
           <div className="stat-card">
 
@@ -346,12 +361,317 @@ const Dashboard = () => {
 
 
         {/* =================================
+            ANALYTICS
+        ================================= */}
+
+        <section className="analytics-grid">
+
+          {/* SALES OVERVIEW */}
+
+          <div className="analytics-card">
+
+            <div className="analytics-card-header">
+
+              <div>
+                <h2>
+                  Sales Overview
+                </h2>
+
+                <p>
+                  Revenue generated by
+                  payment method
+                </p>
+              </div>
+
+              <div className="analytics-header-icon">
+                <FiTrendingUp />
+              </div>
+
+            </div>
+
+
+            <div className="payment-bars">
+
+              {/* CASH */}
+
+              <div className="payment-bar-item">
+
+                <div className="payment-bar-label">
+
+                  <span>
+                    Cash
+                  </span>
+
+                  <strong>
+                    {formatCurrency(
+                      paymentBreakdown
+                        .cash.amount
+                    )}
+                  </strong>
+
+                </div>
+
+                <div className="payment-bar-track">
+
+                  <div
+                    className="payment-bar-fill cash"
+                    style={{
+                      width: `${
+                        (paymentBreakdown.cash
+                          .amount /
+                          maxPaymentAmount) *
+                        100
+                      }%`,
+                    }}
+                  />
+
+                </div>
+
+                <small>
+                  {paymentBreakdown.cash.count}{" "}
+                  transaction
+                  {paymentBreakdown.cash.count !==
+                  1
+                    ? "s"
+                    : ""}
+                </small>
+
+              </div>
+
+
+              {/* TRANSFER */}
+
+              <div className="payment-bar-item">
+
+                <div className="payment-bar-label">
+
+                  <span>
+                    Bank Transfer
+                  </span>
+
+                  <strong>
+                    {formatCurrency(
+                      paymentBreakdown
+                        .transfer.amount
+                    )}
+                  </strong>
+
+                </div>
+
+                <div className="payment-bar-track">
+
+                  <div
+                    className="payment-bar-fill transfer"
+                    style={{
+                      width: `${
+                        (paymentBreakdown
+                          .transfer.amount /
+                          maxPaymentAmount) *
+                        100
+                      }%`,
+                    }}
+                  />
+
+                </div>
+
+                <small>
+                  {
+                    paymentBreakdown.transfer
+                      .count
+                  }{" "}
+                  transaction
+                  {paymentBreakdown.transfer
+                    .count !== 1
+                    ? "s"
+                    : ""}
+                </small>
+
+              </div>
+
+
+              {/* POS */}
+
+              <div className="payment-bar-item">
+
+                <div className="payment-bar-label">
+
+                  <span>
+                    POS
+                  </span>
+
+                  <strong>
+                    {formatCurrency(
+                      paymentBreakdown.pos
+                        .amount
+                    )}
+                  </strong>
+
+                </div>
+
+                <div className="payment-bar-track">
+
+                  <div
+                    className="payment-bar-fill pos"
+                    style={{
+                      width: `${
+                        (paymentBreakdown.pos
+                          .amount /
+                          maxPaymentAmount) *
+                        100
+                      }%`,
+                    }}
+                  />
+
+                </div>
+
+                <small>
+                  {paymentBreakdown.pos.count}{" "}
+                  transaction
+                  {paymentBreakdown.pos.count !==
+                  1
+                    ? "s"
+                    : ""}
+                </small>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          {/* PAYMENT SUMMARY */}
+
+          <div className="analytics-card">
+
+            <div className="analytics-card-header">
+
+              <div>
+                <h2>
+                  Payment Summary
+                </h2>
+
+                <p>
+                  Sales by payment type
+                </p>
+              </div>
+
+              <div className="analytics-header-icon">
+                <FiCreditCard />
+              </div>
+
+            </div>
+
+
+            <div className="payment-summary">
+
+              <div className="payment-summary-item">
+
+                <div className="payment-summary-left">
+
+                  <span className="summary-dot cash-dot" />
+
+                  <div>
+                    <strong>
+                      Cash
+                    </strong>
+
+                    <small>
+                      {
+                        paymentBreakdown
+                          .cash.count
+                      }{" "}
+                      transactions
+                    </small>
+                  </div>
+
+                </div>
+
+                <strong>
+                  {formatCurrency(
+                    paymentBreakdown
+                      .cash.amount
+                  )}
+                </strong>
+
+              </div>
+
+
+              <div className="payment-summary-item">
+
+                <div className="payment-summary-left">
+
+                  <span className="summary-dot transfer-dot" />
+
+                  <div>
+                    <strong>
+                      Transfer
+                    </strong>
+
+                    <small>
+                      {
+                        paymentBreakdown
+                          .transfer.count
+                      }{" "}
+                      transactions
+                    </small>
+                  </div>
+
+                </div>
+
+                <strong>
+                  {formatCurrency(
+                    paymentBreakdown
+                      .transfer.amount
+                  )}
+                </strong>
+
+              </div>
+
+
+              <div className="payment-summary-item">
+
+                <div className="payment-summary-left">
+
+                  <span className="summary-dot pos-dot" />
+
+                  <div>
+                    <strong>
+                      POS
+                    </strong>
+
+                    <small>
+                      {
+                        paymentBreakdown
+                          .pos.count
+                      }{" "}
+                      transactions
+                    </small>
+                  </div>
+
+                </div>
+
+                <strong>
+                  {formatCurrency(
+                    paymentBreakdown.pos
+                      .amount
+                  )}
+                </strong>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* =================================
             RECENT TRANSACTIONS
         ================================= */}
 
         <section className="dashboard-section">
-
-          {/* SECTION HEADER */}
 
           <div className="section-heading">
 
@@ -367,25 +687,16 @@ const Dashboard = () => {
 
             </div>
 
-
             <Link
               to="/transactions"
               className="view-all-link"
             >
-              <span>
-                View all
-              </span>
-
+              View all
               <FiArrowUpRight />
-
             </Link>
 
           </div>
 
-
-          {/* =================================
-              LOADING
-          ================================= */}
 
           {loading ? (
 
@@ -399,13 +710,8 @@ const Dashboard = () => {
 
             </div>
 
-
           ) : recentTransactions.length ===
             0 ? (
-
-            /* =================================
-               EMPTY STATE
-            ================================= */
 
             <div className="empty-state">
 
@@ -418,8 +724,9 @@ const Dashboard = () => {
               </h3>
 
               <p>
-                Start recording your first sale
-                to see your transactions here.
+                Start recording your first
+                sale to see your
+                transactions here.
               </p>
 
               <Link
@@ -427,21 +734,12 @@ const Dashboard = () => {
                 className="primary-button"
               >
                 <FiPlus />
-
-                <span>
-                  Record Sale
-                </span>
-
+                Record Sale
               </Link>
 
             </div>
 
-
           ) : (
-
-            /* =================================
-               TRANSACTION TABLE
-            ================================= */
 
             <div className="recent-table-wrapper">
 
@@ -450,31 +748,14 @@ const Dashboard = () => {
                 <thead>
 
                   <tr>
-
-                    <th>
-                      Product
-                    </th>
-
-                    <th>
-                      Quantity
-                    </th>
-
-                    <th>
-                      Amount
-                    </th>
-
-                    <th>
-                      Payment
-                    </th>
-
-                    <th>
-                      Date
-                    </th>
-
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Amount</th>
+                    <th>Payment</th>
+                    <th>Date</th>
                   </tr>
 
                 </thead>
-
 
                 <tbody>
 
@@ -487,55 +768,41 @@ const Dashboard = () => {
                         }
                       >
 
-                        {/* PRODUCT */}
-
                         <td>
 
                           <div className="product-cell">
 
                             <div className="product-avatar">
-                              {transaction.productName
+                              {transaction
+                                .productName
                                 ?.charAt(0)
                                 ?.toUpperCase() ||
                                 "P"}
                             </div>
 
-                            <div>
-
-                              <strong>
-                                {
-                                  transaction.productName
-                                }
-                              </strong>
-
-                            </div>
+                            <strong>
+                              {
+                                transaction.productName
+                              }
+                            </strong>
 
                           </div>
 
                         </td>
 
-
-                        {/* QUANTITY */}
-
                         <td>
-                          {transaction.quantity}
+                          {
+                            transaction.quantity
+                          }
                         </td>
 
-
-                        {/* AMOUNT */}
-
                         <td>
-
                           <strong>
                             {formatCurrency(
                               transaction.totalAmount
                             )}
                           </strong>
-
                         </td>
-
-
-                        {/* PAYMENT */}
 
                         <td>
 
@@ -548,9 +815,6 @@ const Dashboard = () => {
                           </span>
 
                         </td>
-
-
-                        {/* DATE */}
 
                         <td>
                           {formatDate(
@@ -580,6 +844,7 @@ const Dashboard = () => {
 
         {!loading &&
           transactions.length > 0 && (
+
             <section className="dashboard-quick-action">
 
               <div className="quick-action-icon">
@@ -604,14 +869,11 @@ const Dashboard = () => {
                 className="secondary-button"
               >
                 <FiPlus />
-
-                <span>
-                  Add Sale
-                </span>
-
+                Add Sale
               </Link>
 
             </section>
+
           )}
 
       </main>
