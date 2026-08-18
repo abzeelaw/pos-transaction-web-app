@@ -1,5 +1,9 @@
-import toast from "react-hot-toast";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import {
   FiEdit2,
   FiPlus,
@@ -8,16 +12,26 @@ import {
   FiTrash2,
   FiX,
 } from "react-icons/fi";
+
 import { Link } from "react-router-dom";
+
+import toast from "react-hot-toast";
+
 import api from "../services/api";
 import TransactionModal from "../components/TransactionModel";
 import Sidebar from "../components/Sidebar";
 
 const Transactions = () => {
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  const [search, setSearch] = useState("");
+  const [transactions, setTransactions] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [search, setSearch] =
+    useState("");
+
   const [paymentFilter, setPaymentFilter] =
     useState("all");
 
@@ -33,8 +47,13 @@ const Transactions = () => {
   const [deleteLoading, setDeleteLoading] =
     useState(false);
 
+
+  /*
+   * Fetch transactions
+   */
   const fetchTransactions = async () => {
     try {
+
       setLoading(true);
 
       const response =
@@ -43,27 +62,49 @@ const Transactions = () => {
       setTransactions(
         response.data.transactions || []
       );
+
     } catch (error) {
+
       console.error(
         "Failed to fetch transactions:",
         error
       );
+
+      toast.error(
+        error.response?.data?.message ||
+        "Unable to load transactions."
+      );
+
     } finally {
+
       setLoading(false);
+
     }
   };
 
+
+  /*
+   * Initial load
+   */
   useEffect(() => {
     fetchTransactions();
   }, []);
 
+
+  /*
+   * Search + filter
+   */
   const filteredTransactions = useMemo(() => {
+
     return transactions.filter(
       (transaction) => {
+
         const matchesSearch =
           transaction.productName
             ?.toLowerCase()
-            .includes(search.toLowerCase());
+            .includes(
+              search.toLowerCase()
+            );
 
         const matchesPayment =
           paymentFilter === "all" ||
@@ -76,74 +117,136 @@ const Transactions = () => {
         );
       }
     );
+
   }, [
     transactions,
     search,
     paymentFilter,
   ]);
 
+
+  /*
+   * Filtered revenue
+   */
   const totalFilteredRevenue =
     filteredTransactions.reduce(
       (total, transaction) =>
         total +
-        Number(transaction.totalAmount || 0),
+        Number(
+          transaction.totalAmount || 0
+        ),
       0
     );
 
+
+  /*
+   * Currency
+   */
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      maximumFractionDigits: 0,
-    }).format(amount);
+
+    return new Intl.NumberFormat(
+      "en-NG",
+      {
+        style: "currency",
+        currency: "NGN",
+        maximumFractionDigits: 0,
+      }
+    ).format(amount);
+
   };
 
+
+  /*
+   * Date
+   */
   const formatDate = (date) => {
-    return new Date(date).toLocaleDateString(
-      "en-NG",
-      {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }
-    );
+
+    return new Date(date)
+      .toLocaleDateString(
+        "en-NG",
+        {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }
+      );
+
   };
 
+
+  /*
+   * Time
+   */
   const formatTime = (date) => {
-    return new Date(date).toLocaleTimeString(
-      "en-NG",
-      {
-        hour: "2-digit",
-        minute: "2-digit",
-      }
-    );
+
+    return new Date(date)
+      .toLocaleTimeString(
+        "en-NG",
+        {
+          hour: "2-digit",
+          minute: "2-digit",
+        }
+      );
+
   };
 
+
+  /*
+   * Create
+   */
   const handleCreate = () => {
+
     setEditingTransaction(null);
     setShowModal(true);
+
   };
 
+
+  /*
+   * Edit
+   */
   const handleEdit = (transaction) => {
-    setEditingTransaction(transaction);
+
+    setEditingTransaction(
+      transaction
+    );
+
     setShowModal(true);
+
   };
 
+
+  /*
+   * Modal success
+   */
   const handleModalSuccess = () => {
+
     setShowModal(false);
+
     setEditingTransaction(null);
+
     fetchTransactions();
+
   };
 
+
+  /*
+   * Delete
+   */
   const handleDelete = async () => {
-    if (!deletingTransaction) return;
+
+    if (!deletingTransaction) {
+      return;
+    }
 
     try {
+
       setDeleteLoading(true);
 
       await api.delete(
         `/transactions/${deletingTransaction._id}`
       );
+
 
       setTransactions((current) =>
         current.filter(
@@ -153,32 +256,55 @@ const Transactions = () => {
         )
       );
 
+
+      toast.success(
+        "Transaction deleted successfully"
+      );
+
+
       setDeletingTransaction(null);
-      toast.success("Transaction deleted successfully");
+
     } catch (error) {
+
       console.error(
         "Failed to delete transaction:",
         error
       );
 
       toast.error(
-  error.response?.data?.message ||
-    "Unable to delete transaction."
-);
+        error.response?.data?.message ||
+        "Unable to delete transaction."
+      );
+
     } finally {
+
       setDeleteLoading(false);
+
     }
   };
 
+
+  /*
+   * Clear filters
+   */
   const clearFilters = () => {
+
     setSearch("");
+
     setPaymentFilter("all");
+
   };
+
 
   return (
     <div className="dashboard-layout">
 
+      {/* SIDEBAR */}
+
       <Sidebar />
+
+
+      {/* MAIN */}
 
       <main className="transactions-content">
 
@@ -187,6 +313,7 @@ const Transactions = () => {
         <header className="transactions-header">
 
           <div>
+
             <p className="header-greeting">
               Sales Management
             </p>
@@ -198,14 +325,19 @@ const Transactions = () => {
             <p>
               Record and manage your POS sales.
             </p>
+
           </div>
+
 
           <button
             className="primary-button"
             onClick={handleCreate}
           >
+
             <FiPlus />
+
             New Transaction
+
           </button>
 
         </header>
@@ -214,6 +346,8 @@ const Transactions = () => {
         {/* SUMMARY */}
 
         <section className="stats-grid">
+
+          {/* TRANSACTIONS */}
 
           <div className="stat-card">
 
@@ -228,13 +362,17 @@ const Transactions = () => {
               </p>
 
               <h2>
-                {transactions.length}
+                {loading
+                  ? "..."
+                  : transactions.length}
               </h2>
 
             </div>
 
           </div>
 
+
+          {/* REVENUE */}
 
           <div className="stat-card">
 
@@ -249,9 +387,11 @@ const Transactions = () => {
               </p>
 
               <h2>
-                {formatCurrency(
-                  totalFilteredRevenue
-                )}
+                {loading
+                  ? "..."
+                  : formatCurrency(
+                      totalFilteredRevenue
+                    )}
               </h2>
 
             </div>
@@ -261,9 +401,11 @@ const Transactions = () => {
         </section>
 
 
-        {/* TABLE CARD */}
+        {/* TABLE */}
 
         <section className="dashboard-section">
+
+          {/* TOOLBAR */}
 
           <div className="transactions-toolbar">
 
@@ -294,6 +436,7 @@ const Transactions = () => {
                 )
               }
             >
+
               <option value="all">
                 All payment methods
               </option>
@@ -315,23 +458,30 @@ const Transactions = () => {
           </div>
 
 
+          {/* CLEAR FILTERS */}
+
           {(search ||
             paymentFilter !== "all") && (
-            <div
-              style={{
-                marginBottom: "18px",
-              }}
-            >
+
+            <div className="clear-filter-container">
+
               <button
                 className="secondary-button"
                 onClick={clearFilters}
               >
+
                 <FiX />
+
                 Clear filters
+
               </button>
+
             </div>
+
           )}
 
+
+          {/* LOADING */}
 
           {loading ? (
 
@@ -339,10 +489,18 @@ const Transactions = () => {
 
               <div className="loading-spinner" />
 
+              <p>
+                Loading transactions...
+              </p>
+
             </div>
 
-          ) : filteredTransactions.length ===
-            0 ? (
+          )
+
+
+          /* EMPTY */
+
+          : filteredTransactions.length === 0 ? (
 
             <div className="empty-state">
 
@@ -355,25 +513,39 @@ const Transactions = () => {
               </h3>
 
               <p>
+
                 {transactions.length === 0
+
                   ? "Record your first sale to get started."
+
                   : "Try changing your search or filter."}
+
               </p>
 
-              {transactions.length ===
-                0 && (
+
+              {transactions.length === 0 && (
+
                 <button
                   className="primary-button"
                   onClick={handleCreate}
                 >
+
                   <FiPlus />
+
                   Record Sale
+
                 </button>
+
               )}
 
             </div>
 
-          ) : (
+          )
+
+
+          /* TABLE */
+
+          : (
 
             <div className="transaction-table-wrapper">
 
@@ -415,6 +587,7 @@ const Transactions = () => {
 
                 </thead>
 
+
                 <tbody>
 
                   {filteredTransactions.map(
@@ -426,25 +599,35 @@ const Transactions = () => {
                         }
                       >
 
+                        {/* PRODUCT */}
+
                         <td>
 
                           <div className="product-cell">
 
                             <div className="product-avatar">
-                              {transaction.productName
+
+                              {transaction
+                                .productName
                                 ?.charAt(0)
                                 ?.toUpperCase()}
+
                             </div>
 
                             <strong>
+
                               {
                                 transaction.productName
                               }
+
                             </strong>
 
                           </div>
 
                         </td>
+
+
+                        {/* QUANTITY */}
 
                         <td>
                           {
@@ -452,49 +635,78 @@ const Transactions = () => {
                           }
                         </td>
 
+
+                        {/* UNIT PRICE */}
+
                         <td>
+
                           {formatCurrency(
                             transaction.unitPrice
                           )}
+
                         </td>
 
+
+                        {/* TOTAL */}
+
                         <td>
+
                           <strong>
+
                             {formatCurrency(
                               transaction.totalAmount
                             )}
+
                           </strong>
+
                         </td>
+
+
+                        {/* PAYMENT */}
 
                         <td>
 
-                          <span className="payment-badge">
+                          <span
+                            className={`payment-badge payment-${transaction.paymentMethod}`}
+                          >
+
                             {
                               transaction.paymentMethod
                             }
+
                           </span>
 
                         </td>
+
+
+                        {/* DATE */}
 
                         <td>
 
                           <div className="date-cell">
 
                             <span>
+
                               {formatDate(
                                 transaction.createdAt
                               )}
+
                             </span>
 
                             <small>
+
                               {formatTime(
                                 transaction.createdAt
                               )}
+
                             </small>
 
                           </div>
 
                         </td>
+
+
+                        {/* ACTIONS */}
 
                         <td>
 
@@ -509,8 +721,11 @@ const Transactions = () => {
                                 )
                               }
                             >
+
                               <FiEdit2 />
+
                             </button>
+
 
                             <button
                               className="delete-button"
@@ -521,7 +736,9 @@ const Transactions = () => {
                                 )
                               }
                             >
+
                               <FiTrash2 />
+
                             </button>
 
                           </div>
@@ -549,47 +766,82 @@ const Transactions = () => {
       {/* CREATE / EDIT MODAL */}
 
       {showModal && (
+
         <TransactionModal
+
           transaction={
             editingTransaction
           }
+
           onClose={() => {
+
             setShowModal(false);
+
             setEditingTransaction(null);
+
           }}
+
           onSuccess={
             handleModalSuccess
           }
+
         />
+
       )}
 
 
-      {/* DELETE MODAL */}
+      {/* DELETE CONFIRMATION */}
 
       {deletingTransaction && (
 
-        <div className="modal-overlay">
+        <div
+          className="modal-overlay"
+          onMouseDown={(event) => {
+
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+
+              if (!deleteLoading) {
+                setDeletingTransaction(
+                  null
+                );
+              }
+
+            }
+
+          }}
+        >
 
           <div className="confirm-modal">
 
             <div className="confirm-icon">
+
               <FiTrash2 />
+
             </div>
+
 
             <h2>
               Delete transaction?
             </h2>
 
+
             <p>
-              This will permanently delete the
-              transaction for{" "}
+
+              This will permanently delete
+              the transaction for{" "}
+
               <strong>
                 {
                   deletingTransaction.productName
                 }
               </strong>
               .
+
             </p>
+
 
             <div className="confirm-actions">
 
@@ -602,17 +854,22 @@ const Transactions = () => {
                 }
                 disabled={deleteLoading}
               >
+
                 Cancel
+
               </button>
+
 
               <button
                 className="danger-button"
                 onClick={handleDelete}
                 disabled={deleteLoading}
               >
+
                 {deleteLoading
                   ? "Deleting..."
                   : "Delete"}
+
               </button>
 
             </div>

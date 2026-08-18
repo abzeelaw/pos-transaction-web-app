@@ -5,6 +5,8 @@ import {
   Navigate,
 } from "react-router-dom";
 
+import { Toaster } from "react-hot-toast";
+
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import Login from "./pages/Login";
@@ -54,9 +56,38 @@ function App() {
   return (
     <BrowserRouter>
 
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            borderRadius: "12px",
+            background: "#111827",
+            color: "#ffffff",
+            fontSize: "14px",
+            fontWeight: "500",
+            padding: "14px 16px",
+          },
+
+          success: {
+            iconTheme: {
+              primary: "#22c55e",
+              secondary: "#ffffff",
+            },
+          },
+
+          error: {
+            iconTheme: {
+              primary: "#ef4444",
+              secondary: "#ffffff",
+            },
+          },
+        }}
+      />
+
       <Routes>
 
-        {/* =================================
+        {/* ================================
             PUBLIC ROUTES
         ================================= */}
 
@@ -79,7 +110,7 @@ function App() {
         />
 
 
-        {/* =================================
+        {/* ================================
             PROTECTED ROUTES
         ================================= */}
 
@@ -102,8 +133,8 @@ function App() {
         />
 
 
-        {/* =================================
-            DEFAULT
+        {/* ================================
+            DEFAULT ROUTE
         ================================= */}
 
         <Route
