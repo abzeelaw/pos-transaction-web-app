@@ -1,110 +1,170 @@
-import { NavLink } from "react-router-dom";
 import {
-  FiHome,
-  FiShoppingBag,
+  FiBarChart2,
+  FiGrid,
   FiLogOut,
-  FiX,
   FiMenu,
+  FiShoppingBag,
+  FiX,
 } from "react-icons/fi";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
 const Sidebar = () => {
-  const { logout } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const closeSidebar = () => {
-    setOpen(false);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
+  const closeMobileSidebar = () => {
+    setMobileOpen(false);
   };
 
   return (
     <>
       {/* Mobile menu button */}
+
       <button
         className="mobile-menu-button"
-        onClick={() => setOpen(true)}
+        onClick={() => setMobileOpen(true)}
         aria-label="Open navigation"
       >
         <FiMenu />
       </button>
 
       {/* Mobile overlay */}
-      {open && (
+
+      {mobileOpen && (
         <div
           className="sidebar-overlay"
-          onClick={closeSidebar}
+          onClick={closeMobileSidebar}
         />
       )}
 
       <aside
         className={`sidebar ${
-          open ? "sidebar-open" : ""
+          mobileOpen ? "sidebar-mobile-open" : ""
         }`}
       >
-        {/* Brand */}
+
+        {/* BRAND */}
+
         <div className="sidebar-brand">
+
           <div className="brand-mark">
-            P
+            <FiShoppingBag />
           </div>
 
           <div className="brand-text">
-            <strong>POS Tracker</strong>
-            <span>Sales Management</span>
+            <strong>
+              POS Tracker
+            </strong>
+
+            <span>
+              Sales Management
+            </span>
           </div>
 
-          {/* Mobile close */}
           <button
-            className="sidebar-close-button"
-            onClick={closeSidebar}
+            className="mobile-close-sidebar"
+            onClick={closeMobileSidebar}
             aria-label="Close navigation"
           >
             <FiX />
           </button>
+
         </div>
 
-        {/* Navigation */}
+
+        {/* NAVIGATION */}
+
         <nav className="sidebar-nav">
-          <p className="sidebar-section-title">
-            MENU
+
+          <p className="sidebar-label">
+            MAIN MENU
           </p>
 
           <NavLink
             to="/dashboard"
+            onClick={closeMobileSidebar}
             className={({ isActive }) =>
-              `nav-item ${
+              `sidebar-link ${
                 isActive ? "active" : ""
               }`
             }
-            onClick={closeSidebar}
           >
-            <FiHome />
-            <span>Dashboard</span>
+            <FiGrid />
+
+            <span>
+              Dashboard
+            </span>
           </NavLink>
+
 
           <NavLink
             to="/transactions"
+            onClick={closeMobileSidebar}
             className={({ isActive }) =>
-              `nav-item ${
+              `sidebar-link ${
                 isActive ? "active" : ""
               }`
             }
-            onClick={closeSidebar}
           >
-            <FiShoppingBag />
-            <span>Transactions</span>
+            <FiBarChart2 />
+
+            <span>
+              Transactions
+            </span>
           </NavLink>
+
         </nav>
 
-        {/* Bottom */}
+
+        {/* USER */}
+
         <div className="sidebar-bottom">
+
+          <div className="sidebar-user">
+
+            <div className="user-avatar">
+              {user?.name
+                ?.charAt(0)
+                ?.toUpperCase() || "U"}
+            </div>
+
+            <div className="user-info">
+
+              <strong>
+                {user?.name || "User"}
+              </strong>
+
+              <span>
+                {user?.email || ""}
+              </span>
+
+            </div>
+
+          </div>
+
+
           <button
             className="logout-button"
-            onClick={logout}
+            onClick={handleLogout}
           >
             <FiLogOut />
-            <span>Logout</span>
+
+            <span>
+              Sign out
+            </span>
           </button>
+
         </div>
+
       </aside>
     </>
   );
