@@ -59,6 +59,46 @@ const Dashboard = () => {
     0
   );
 
+  const averageSale =
+  transactions.length > 0
+    ? totalRevenue / transactions.length
+    : 0;
+
+const paymentTotals = {
+  cash: transactions
+    .filter(
+      (transaction) =>
+        transaction.paymentMethod === "cash"
+    )
+    .reduce(
+      (total, transaction) =>
+        total + Number(transaction.totalAmount || 0),
+      0
+    ),
+
+  transfer: transactions
+    .filter(
+      (transaction) =>
+        transaction.paymentMethod === "transfer"
+    )
+    .reduce(
+      (total, transaction) =>
+        total + Number(transaction.totalAmount || 0),
+      0
+    ),
+
+  pos: transactions
+    .filter(
+      (transaction) =>
+        transaction.paymentMethod === "pos"
+    )
+    .reduce(
+      (total, transaction) =>
+        total + Number(transaction.totalAmount || 0),
+      0
+    ),
+};
+
   const recentTransactions = [...transactions]
     .sort(
       (a, b) =>
@@ -212,8 +252,92 @@ const Dashboard = () => {
 
           </div>
 
+          <div className="stat-card">
+
+  <div className="stat-icon">
+    <FiTrendingUp />
+  </div>
+
+  <div>
+    <p>Average Sale</p>
+
+    <h2>
+      {loading
+        ? "..."
+        : formatCurrency(averageSale)}
+    </h2>
+  </div>
+
+</div>
+
         </section>
 
+        <section className="payment-section">
+
+  <div className="section-heading">
+
+    <div>
+      <h2>Payment Breakdown</h2>
+
+      <p>
+        Revenue by payment method
+      </p>
+    </div>
+
+  </div>
+
+  <div className="payment-grid">
+
+    <div className="payment-card">
+
+      <div>
+        <span>Cash</span>
+        <small>Cash payments</small>
+      </div>
+
+      <strong>
+        {loading
+          ? "..."
+          : formatCurrency(paymentTotals.cash)}
+      </strong>
+
+    </div>
+
+
+    <div className="payment-card">
+
+      <div>
+        <span>Transfer</span>
+        <small>Bank transfers</small>
+      </div>
+
+      <strong>
+        {loading
+          ? "..."
+          : formatCurrency(paymentTotals.transfer)}
+      </strong>
+
+    </div>
+
+
+    <div className="payment-card">
+
+      <div>
+        <span>POS</span>
+        <small>POS payments</small>
+      </div>
+
+      <strong>
+        {loading
+          ? "..."
+          : formatCurrency(paymentTotals.pos)}
+      </strong>
+
+    </div>
+
+  </div>
+
+</section>
 
         {/* Recent Transactions */}
 
