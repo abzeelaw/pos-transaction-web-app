@@ -1,62 +1,117 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
 import api from "../services/api";
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("pos_token");
+    const token =
+      localStorage.getItem("pos_token");
 
-    if (!token) {
-      setLoading(false);
-      return;
+    const storedUser =
+      localStorage.getItem("pos_user");
+
+    if (token && storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error(
+          "Failed to restore user:",
+          error
+        );
+
+        localStorage.removeItem("pos_token");
+        localStorage.removeItem("pos_user");
+      }
     }
 
-    const getCurrentUser = async () => {
-      try {
-        const response = await api.get("/auth/me");
-        setUser(response.data.user);
-      } catch (error) {
-        localStorage.removeItem("pos_token");
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getCurrentUser();
+    setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
-    const response = await api.post("/auth/login", {
-      email,
-      password,
-    });
+  const login = async (
+    email,
+    password
+  ) => {
+    const response = await api.post(
+      "/auth/login",
+      {
+        email,
+        password,
+      }
+    );
 
-    localStorage.setItem("pos_token", response.data.token);
-    setUser(response.data.user);
+    const {
+      token,
+      user,
+    } = response.data;
+
+    localStorage.setItem(
+      "pos_token",
+      token
+    );
+
+    localStorage.setItem(
+      "pos_user",
+      JSON.stringify(user)
+    );
+
+    setUser(user);
 
     return response.data;
   };
 
-  const register = async (name, email, password) => {
-    const response = await api.post("/auth/register", {
-      name,
-      email,
-      password,
-    });
+  const register = async (
+    name,
+    email,
+    password
+  ) => {
+    const response = await api.post(
+      "/auth/register",
+      {
+        name,
+        email,
+        password,
+      }
+    );
 
-    localStorage.setItem("pos_token", response.data.token);
-    setUser(response.data.user);
+    const {
+      token,
+      user,
+    } = response.data;
+
+    localStorage.setItem(
+      "pos_token",
+      token
+    );
+
+    localStorage.setItem(
+      "pos_user",
+      JSON.stringify(user)
+    );
+
+    setUser(user);
 
     return response.data;
   };
 
   const logout = () => {
-    localStorage.removeItem("pos_token");
+    localStorage.removeItem(
+      "pos_token"
+    );
+
+    localStorage.removeItem(
+      "pos_user"
+    );
+
     setUser(null);
   };
 
