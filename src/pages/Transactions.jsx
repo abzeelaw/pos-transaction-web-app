@@ -1,35 +1,43 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  FiEdit2,
   FiPlus,
   FiSearch,
-  FiEdit2,
-  FiTrash2,
-  FiRefreshCw,
   FiShoppingBag,
+  FiTrash2,
+  FiX,
 } from "react-icons/fi";
+import { Link } from "react-router-dom";
 import api from "../services/api";
-import TransactionModel from "../components/TransactionModel";
+import TransactionModal from "../components/TransactionModel";
+import Sidebar from "../components/Sidebar";
 
 const Transactions = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
-  const [paymentFilter, setPaymentFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] =
+    useState("all");
 
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] =
+    useState(false);
+
   const [editingTransaction, setEditingTransaction] =
     useState(null);
 
-  // ===============================
-  // FETCH TRANSACTIONS
-  // ===============================
+  const [deletingTransaction, setDeletingTransaction] =
+    useState(null);
+
+  const [deleteLoading, setDeleteLoading] =
+    useState(false);
 
   const fetchTransactions = async () => {
     try {
       setLoading(true);
 
-      const response = await api.get("/transactions");
+      const response =
+        await api.get("/transactions");
 
       setTransactions(
         response.data.transactions || []
@@ -48,46 +56,48 @@ const Transactions = () => {
     fetchTransactions();
   }, []);
 
-  // ===============================
-  // FILTER TRANSACTIONS
-  // ===============================
-
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((transaction) => {
-      const productName =
-        transaction.productName || "";
+    return transactions.filter(
+      (transaction) => {
+        const matchesSearch =
+          transaction.productName
+            ?.toLowerCase()
+            .includes(search.toLowerCase());
 
-      const matchesSearch = productName
-        .toLowerCase()
-        .includes(search.toLowerCase());
+        const matchesPayment =
+          paymentFilter === "all" ||
+          transaction.paymentMethod ===
+            paymentFilter;
 
-      const matchesPayment =
-        paymentFilter === "all" ||
-        transaction.paymentMethod === paymentFilter;
-
-      return matchesSearch && matchesPayment;
-    });
+        return (
+          matchesSearch &&
+          matchesPayment
+        );
+      }
+    );
   }, [
     transactions,
     search,
     paymentFilter,
   ]);
 
-  // ===============================
-  // FORMATTING
-  // ===============================
+  const totalFilteredRevenue =
+    filteredTransactions.reduce(
+      (total, transaction) =>
+        total +
+        Number(transaction.totalAmount || 0),
+      0
+    );
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-NG", {
       style: "currency",
       currency: "NGN",
       maximumFractionDigits: 0,
-    }).format(Number(amount) || 0);
+    }).format(amount);
   };
 
   const formatDate = (date) => {
-    if (!date) return "-";
-
     return new Date(date).toLocaleDateString(
       "en-NG",
       {
@@ -98,39 +108,51 @@ const Transactions = () => {
     );
   };
 
-  // ===============================
-  // CREATE
-  // ===============================
+  const formatTime = (date) => {
+    return new Date(date).toLocaleTimeString(
+      "en-NG",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    );
+  };
 
   const handleCreate = () => {
     setEditingTransaction(null);
     setShowModal(true);
   };
 
-  // ===============================
-  // EDIT
-  // ===============================
-
   const handleEdit = (transaction) => {
     setEditingTransaction(transaction);
     setShowModal(true);
   };
 
-  // ===============================
-  // DELETE
-  // ===============================
+  const handleModalSuccess = () => {
+    setShowModal(false);
+    setEditingTransaction(null);
+    fetchTransactions();
+  };
 
-  const handleDelete = async (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this transaction?"
-    );
-
-    if (!confirmed) return;
+  const handleDelete = async () => {
+    if (!deletingTransaction) return;
 
     try {
-      await api.delete(`/transactions/${id}`);
+      setDeleteLoading(true);
 
-      await fetchTransactions();
+      await api.delete(
+        `/transactions/${deletingTransaction._id}`
+      );
+
+      setTransactions((current) =>
+        current.filter(
+          (transaction) =>
+            transaction._id !==
+            deletingTransaction._id
+        )
+      );
+
+      setDeletingTransaction(null);
     } catch (error) {
       console.error(
         "Failed to delete transaction:",
@@ -141,154 +163,204 @@ const Transactions = () => {
         error.response?.data?.message ||
           "Unable to delete transaction."
       );
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
-  // ===============================
-  // MODAL
-  // ===============================
-
-  const handleModalClose = () => {
-    setShowModal(false);
-    setEditingTransaction(null);
+  const clearFilters = () => {
+    setSearch("");
+    setPaymentFilter("all");
   };
-
-  const handleTransactionSaved = async () => {
-    handleModalClose();
-    await fetchTransactions();
-  };
-
-  // ===============================
-  // RENDER
-  // ===============================
 
   return (
-    <div className="transactions-page">
+    <div className="dashboard-layout">
 
-      {/* PAGE HEADER */}
+      <Sidebar />
 
-      <div className="transactions-header">
+      <main className="transactions-content">
 
-        <div>
-          <p className="page-eyebrow">
-            Sales Management
-          </p>
+        {/* HEADER */}
 
-          <h1>Transactions</h1>
+        <header className="transactions-header">
 
-          <p className="page-description">
-            Record and manage your POS transactions.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="primary-button"
-          onClick={handleCreate}
-        >
-          <FiPlus />
-          New Transaction
-        </button>
-
-      </div>
-
-
-      {/* FILTERS */}
-
-      <div className="transaction-filters">
-
-        <div className="search-box">
-
-          <FiSearch />
-
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
-          />
-
-        </div>
-
-
-        <select
-          value={paymentFilter}
-          onChange={(event) =>
-            setPaymentFilter(event.target.value)
-          }
-        >
-          <option value="all">
-            All payment methods
-          </option>
-
-          <option value="cash">
-            Cash
-          </option>
-
-          <option value="transfer">
-            Transfer
-          </option>
-
-          <option value="pos">
-            POS
-          </option>
-        </select>
-
-
-        <button
-          type="button"
-          className="refresh-button"
-          onClick={fetchTransactions}
-          disabled={loading}
-        >
-          <FiRefreshCw
-            className={loading ? "spin" : ""}
-          />
-
-          Refresh
-        </button>
-
-      </div>
-
-
-      {/* TRANSACTION TABLE */}
-
-      <div className="transactions-card">
-
-        {loading ? (
-
-          <div className="transactions-empty">
-
-            <p>
-              Loading transactions...
+          <div>
+            <p className="header-greeting">
+              Sales Management
             </p>
 
+            <h1>
+              Transactions
+            </h1>
+
+            <p>
+              Record and manage your POS sales.
+            </p>
           </div>
 
-        ) : filteredTransactions.length === 0 ? (
+          <button
+            className="primary-button"
+            onClick={handleCreate}
+          >
+            <FiPlus />
+            New Transaction
+          </button>
 
-          <div className="transactions-empty">
+        </header>
 
-            <div className="empty-icon">
+
+        {/* SUMMARY */}
+
+        <section className="stats-grid">
+
+          <div className="stat-card">
+
+            <div className="stat-icon">
               <FiShoppingBag />
             </div>
 
-            <h3>
-              No transactions found
-            </h3>
+            <div className="stat-content">
 
-            <p>
-              {search || paymentFilter !== "all"
-                ? "Try changing your search or filters."
-                : "Start recording your first sale."}
-            </p>
+              <p>
+                Total Transactions
+              </p>
 
-            {!search &&
-              paymentFilter === "all" && (
+              <h2>
+                {transactions.length}
+              </h2>
+
+            </div>
+
+          </div>
+
+
+          <div className="stat-card">
+
+            <div className="stat-icon">
+              ₦
+            </div>
+
+            <div className="stat-content">
+
+              <p>
+                Filtered Revenue
+              </p>
+
+              <h2>
+                {formatCurrency(
+                  totalFilteredRevenue
+                )}
+              </h2>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* TABLE CARD */}
+
+        <section className="dashboard-section">
+
+          <div className="transactions-toolbar">
+
+            <div className="search-box">
+
+              <FiSearch />
+
+              <input
+                type="text"
+                placeholder="Search product..."
+                value={search}
+                onChange={(event) =>
+                  setSearch(
+                    event.target.value
+                  )
+                }
+              />
+
+            </div>
+
+
+            <select
+              className="filter-select"
+              value={paymentFilter}
+              onChange={(event) =>
+                setPaymentFilter(
+                  event.target.value
+                )
+              }
+            >
+              <option value="all">
+                All payment methods
+              </option>
+
+              <option value="cash">
+                Cash
+              </option>
+
+              <option value="transfer">
+                Transfer
+              </option>
+
+              <option value="pos">
+                POS
+              </option>
+
+            </select>
+
+          </div>
+
+
+          {(search ||
+            paymentFilter !== "all") && (
+            <div
+              style={{
+                marginBottom: "18px",
+              }}
+            >
+              <button
+                className="secondary-button"
+                onClick={clearFilters}
+              >
+                <FiX />
+                Clear filters
+              </button>
+            </div>
+          )}
+
+
+          {loading ? (
+
+            <div className="loading-container">
+
+              <div className="loading-spinner" />
+
+            </div>
+
+          ) : filteredTransactions.length ===
+            0 ? (
+
+            <div className="empty-state">
+
+              <div className="empty-icon">
+                <FiShoppingBag />
+              </div>
+
+              <h3>
+                No transactions found
+              </h3>
+
+              <p>
+                {transactions.length === 0
+                  ? "Record your first sale to get started."
+                  : "Try changing your search or filter."}
+              </p>
+
+              {transactions.length ===
+                0 && (
                 <button
-                  type="button"
                   className="primary-button"
                   onClick={handleCreate}
                 >
@@ -297,133 +369,256 @@ const Transactions = () => {
                 </button>
               )}
 
-          </div>
+            </div>
 
-        ) : (
+          ) : (
 
-          <div className="table-wrapper">
+            <div className="transaction-table-wrapper">
 
-            <table className="transaction-table">
+              <table className="transaction-table">
 
-              <thead>
+                <thead>
 
-                <tr>
-                  <th>Product</th>
-                  <th>Quantity</th>
-                  <th>Unit Price</th>
-                  <th>Total</th>
-                  <th>Payment</th>
-                  <th>Date</th>
-                  <th>Actions</th>
-                </tr>
+                  <tr>
 
-              </thead>
+                    <th>
+                      Product
+                    </th>
 
-              <tbody>
+                    <th>
+                      Quantity
+                    </th>
 
-                {filteredTransactions.map(
-                  (transaction) => (
+                    <th>
+                      Unit Price
+                    </th>
 
-                    <tr
-                      key={transaction._id}
-                    >
+                    <th>
+                      Total
+                    </th>
 
-                      <td>
-                        <strong>
-                          {transaction.productName}
-                        </strong>
-                      </td>
+                    <th>
+                      Payment
+                    </th>
 
-                      <td>
-                        {transaction.quantity}
-                      </td>
+                    <th>
+                      Date
+                    </th>
 
-                      <td>
-                        {formatCurrency(
-                          transaction.unitPrice
-                        )}
-                      </td>
+                    <th>
+                      Actions
+                    </th>
 
-                      <td>
-                        <strong>
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  {filteredTransactions.map(
+                    (transaction) => (
+
+                      <tr
+                        key={
+                          transaction._id
+                        }
+                      >
+
+                        <td>
+
+                          <div className="product-cell">
+
+                            <div className="product-avatar">
+                              {transaction.productName
+                                ?.charAt(0)
+                                ?.toUpperCase()}
+                            </div>
+
+                            <strong>
+                              {
+                                transaction.productName
+                              }
+                            </strong>
+
+                          </div>
+
+                        </td>
+
+                        <td>
+                          {
+                            transaction.quantity
+                          }
+                        </td>
+
+                        <td>
                           {formatCurrency(
-                            transaction.totalAmount
+                            transaction.unitPrice
                           )}
-                        </strong>
-                      </td>
+                        </td>
 
-                      <td>
-                        <span
-                          className={`payment-badge ${transaction.paymentMethod}`}
-                        >
-                          {transaction.paymentMethod}
-                        </span>
-                      </td>
+                        <td>
+                          <strong>
+                            {formatCurrency(
+                              transaction.totalAmount
+                            )}
+                          </strong>
+                        </td>
 
-                      <td>
-                        {formatDate(
-                          transaction.createdAt
-                        )}
-                      </td>
+                        <td>
 
-                      <td>
-
-                        <div className="table-actions">
-
-                          <button
-                            type="button"
-                            className="icon-button edit"
-                            onClick={() =>
-                              handleEdit(
-                                transaction
-                              )
+                          <span className="payment-badge">
+                            {
+                              transaction.paymentMethod
                             }
-                            title="Edit transaction"
-                          >
-                            <FiEdit2 />
-                          </button>
+                          </span>
 
-                          <button
-                            type="button"
-                            className="icon-button delete"
-                            onClick={() =>
-                              handleDelete(
-                                transaction._id
-                              )
-                            }
-                            title="Delete transaction"
-                          >
-                            <FiTrash2 />
-                          </button>
+                        </td>
 
-                        </div>
+                        <td>
 
-                      </td>
+                          <div className="date-cell">
 
-                    </tr>
+                            <span>
+                              {formatDate(
+                                transaction.createdAt
+                              )}
+                            </span>
 
-                  )
-                )}
+                            <small>
+                              {formatTime(
+                                transaction.createdAt
+                              )}
+                            </small>
 
-              </tbody>
+                          </div>
 
-            </table>
+                        </td>
 
-          </div>
+                        <td>
 
-        )}
+                          <div className="transaction-actions">
 
-      </div>
+                            <button
+                              className="edit-button"
+                              title="Edit transaction"
+                              onClick={() =>
+                                handleEdit(
+                                  transaction
+                                )
+                              }
+                            >
+                              <FiEdit2 />
+                            </button>
+
+                            <button
+                              className="delete-button"
+                              title="Delete transaction"
+                              onClick={() =>
+                                setDeletingTransaction(
+                                  transaction
+                                )
+                              }
+                            >
+                              <FiTrash2 />
+                            </button>
+
+                          </div>
+
+                        </td>
+
+                      </tr>
+
+                    )
+                  )}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          )}
+
+        </section>
+
+      </main>
 
 
       {/* CREATE / EDIT MODAL */}
 
       {showModal && (
-        <TransactionModel
-          transaction={editingTransaction}
-          onClose={handleModalClose}
-          onSaved={handleTransactionSaved}
+        <TransactionModal
+          transaction={
+            editingTransaction
+          }
+          onClose={() => {
+            setShowModal(false);
+            setEditingTransaction(null);
+          }}
+          onSuccess={
+            handleModalSuccess
+          }
         />
+      )}
+
+
+      {/* DELETE MODAL */}
+
+      {deletingTransaction && (
+
+        <div className="modal-overlay">
+
+          <div className="confirm-modal">
+
+            <div className="confirm-icon">
+              <FiTrash2 />
+            </div>
+
+            <h2>
+              Delete transaction?
+            </h2>
+
+            <p>
+              This will permanently delete the
+              transaction for{" "}
+              <strong>
+                {
+                  deletingTransaction.productName
+                }
+              </strong>
+              .
+            </p>
+
+            <div className="confirm-actions">
+
+              <button
+                className="secondary-button"
+                onClick={() =>
+                  setDeletingTransaction(
+                    null
+                  )
+                }
+                disabled={deleteLoading}
+              >
+                Cancel
+              </button>
+
+              <button
+                className="danger-button"
+                onClick={handleDelete}
+                disabled={deleteLoading}
+              >
+                {deleteLoading
+                  ? "Deleting..."
+                  : "Delete"}
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
       )}
 
     </div>
