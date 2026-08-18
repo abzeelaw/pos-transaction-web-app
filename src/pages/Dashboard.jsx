@@ -1,54 +1,79 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import {
   FiActivity,
   FiArrowUpRight,
   FiCreditCard,
-  FiLogOut,
   FiPlus,
   FiShoppingBag,
   FiTrendingUp,
 } from "react-icons/fi";
+import { Link } from "react-router-dom";
+
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
+import Sidebar from "../components/Sidebar";
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  /*
+  ========================================
+  FETCH TRANSACTIONS
+  ========================================
+  */
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+
+      const response = await api.get("/transactions");
+
+      setTransactions(
+        response.data.transactions || []
+      );
+    } catch (error) {
+      console.error(
+        "Failed to fetch transactions:",
+        error
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        const response = await api.get("/transactions");
-
-        setTransactions(
-          response.data.transactions || []
-        );
-      } catch (error) {
-        console.error(
-          "Failed to fetch transactions:",
-          error
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchTransactions();
   }, []);
 
+  /*
+  ========================================
+  DATE
+  ========================================
+  */
+
   const today = new Date();
+
+  /*
+  ========================================
+  TODAY'S TRANSACTIONS
+  ========================================
+  */
 
   const todaysTransactions = useMemo(() => {
     return transactions.filter((transaction) => {
-      const transactionDate = new Date(
-        transaction.createdAt
-      );
+      if (!transaction.createdAt) {
+        return false;
+      }
+
+      const transactionDate =
+        new Date(transaction.createdAt);
 
       return (
-        transactionDate.getDate() === today.getDate() &&
+        transactionDate.getDate() ===
+          today.getDate() &&
         transactionDate.getMonth() ===
           today.getMonth() &&
         transactionDate.getFullYear() ===
@@ -56,6 +81,12 @@ const Dashboard = () => {
       );
     });
   }, [transactions]);
+
+  /*
+  ========================================
+  TODAY'S SALES
+  ========================================
+  */
 
   const todaysSales = useMemo(() => {
     return todaysTransactions.reduce(
@@ -66,6 +97,12 @@ const Dashboard = () => {
     );
   }, [todaysTransactions]);
 
+  /*
+  ========================================
+  TOTAL REVENUE
+  ========================================
+  */
+
   const totalRevenue = useMemo(() => {
     return transactions.reduce(
       (total, transaction) =>
@@ -75,11 +112,11 @@ const Dashboard = () => {
     );
   }, [transactions]);
 
-  const averageSale = useMemo(() => {
-    if (!transactions.length) return 0;
-
-    return totalRevenue / transactions.length;
-  }, [transactions, totalRevenue]);
+  /*
+  ========================================
+  RECENT TRANSACTIONS
+  ========================================
+  */
 
   const recentTransactions = useMemo(() => {
     return [...transactions]
@@ -91,6 +128,12 @@ const Dashboard = () => {
       .slice(0, 5);
   }, [transactions]);
 
+  /*
+  ========================================
+  CURRENCY FORMAT
+  ========================================
+  */
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-NG", {
       style: "currency",
@@ -99,7 +142,17 @@ const Dashboard = () => {
     }).format(amount);
   };
 
+  /*
+  ========================================
+  DATE FORMAT
+  ========================================
+  */
+
   const formatDate = (date) => {
+    if (!date) {
+      return "-";
+    }
+
     return new Date(date).toLocaleDateString(
       "en-NG",
       {
@@ -110,106 +163,90 @@ const Dashboard = () => {
     );
   };
 
-  const formatTime = (date) => {
-    return new Date(date).toLocaleTimeString(
-      "en-NG",
-      {
-        hour: "2-digit",
-        minute: "2-digit",
-      }
+  /*
+  ========================================
+  PAYMENT LABEL
+  ========================================
+  */
+
+  const formatPaymentMethod = (method) => {
+    if (!method) {
+      return "-";
+    }
+
+    return (
+      method.charAt(0).toUpperCase() +
+      method.slice(1)
     );
   };
+
+  /*
+  ========================================
+  UI
+  ========================================
+  */
 
   return (
     <div className="dashboard-layout">
 
-      {/* SIDEBAR */}
+      {/* =================================
+          SIDEBAR
+      ================================= */}
 
-      <aside className="sidebar">
-
-        <div className="sidebar-brand">
-          <div className="brand-mark">
-            P
-          </div>
-
-          <span>
-            POS Tracker
-          </span>
-        </div>
-
-        <nav className="sidebar-nav">
-
-          <Link
-            to="/dashboard"
-            className="nav-item active"
-          >
-            <FiActivity />
-            <span>
-              Dashboard
-            </span>
-          </Link>
-
-          <Link
-            to="/transactions"
-            className="nav-item"
-          >
-            <FiShoppingBag />
-            <span>
-              Transactions
-            </span>
-          </Link>
-
-        </nav>
-
-        <button
-          className="logout-button"
-          onClick={logout}
-        >
-          <FiLogOut />
-          <span>
-            Logout
-          </span>
-        </button>
-
-      </aside>
+      <Sidebar />
 
 
-      {/* MAIN */}
+      {/* =================================
+          MAIN CONTENT
+      ================================= */}
 
       <main className="dashboard-main">
 
+        {/* =================================
+            HEADER
+        ================================= */}
+
         <header className="dashboard-header">
 
-          <div>
+          <div className="dashboard-header-content">
+
             <p className="header-greeting">
-              Dashboard
+              Welcome back
             </p>
 
             <h1>
-              Welcome back,{" "}
               {user?.name || "POS Agent"}
             </h1>
 
             <p className="header-description">
-              Here's an overview of your
-              transaction activity.
+              Here's what's happening with your
+              sales today.
             </p>
+
           </div>
+
 
           <Link
             to="/transactions"
             className="primary-button"
           >
             <FiPlus />
-            New Transaction
+
+            <span>
+              New Transaction
+            </span>
           </Link>
 
         </header>
 
 
-        {/* STATS */}
+        {/* =================================
+            STATISTICS
+        ================================= */}
 
         <section className="stats-grid">
+
+          {/* TODAY'S SALES */}
 
           <div className="stat-card">
 
@@ -218,6 +255,7 @@ const Dashboard = () => {
             </div>
 
             <div className="stat-content">
+
               <p>
                 Today's Sales
               </p>
@@ -230,7 +268,7 @@ const Dashboard = () => {
                     )}
               </h2>
 
-              <span className="stat-helper">
+              <span className="stat-meta">
                 {todaysTransactions.length}{" "}
                 transaction
                 {todaysTransactions.length !==
@@ -239,10 +277,13 @@ const Dashboard = () => {
                   : ""}{" "}
                 today
               </span>
+
             </div>
 
           </div>
 
+
+          {/* TOTAL TRANSACTIONS */}
 
           <div className="stat-card">
 
@@ -262,14 +303,16 @@ const Dashboard = () => {
                   : transactions.length}
               </h2>
 
-              <span className="stat-helper">
-                Total recorded sales
+              <span className="stat-meta">
+                All recorded sales
               </span>
 
             </div>
 
           </div>
 
+
+          {/* TOTAL REVENUE */}
 
           <div className="stat-card">
 
@@ -291,37 +334,8 @@ const Dashboard = () => {
                     )}
               </h2>
 
-              <span className="stat-helper">
-                Across all transactions
-              </span>
-
-            </div>
-
-          </div>
-
-
-          <div className="stat-card">
-
-            <div className="stat-icon">
-              <FiShoppingBag />
-            </div>
-
-            <div className="stat-content">
-
-              <p>
-                Average Sale
-              </p>
-
-              <h2>
-                {loading
-                  ? "..."
-                  : formatCurrency(
-                      averageSale
-                    )}
-              </h2>
-
-              <span className="stat-helper">
-                Per transaction
+              <span className="stat-meta">
+                All-time revenue
               </span>
 
             </div>
@@ -331,13 +345,18 @@ const Dashboard = () => {
         </section>
 
 
-        {/* RECENT TRANSACTIONS */}
+        {/* =================================
+            RECENT TRANSACTIONS
+        ================================= */}
 
         <section className="dashboard-section">
+
+          {/* SECTION HEADER */}
 
           <div className="section-heading">
 
             <div>
+
               <h2>
                 Recent Transactions
               </h2>
@@ -345,26 +364,48 @@ const Dashboard = () => {
               <p>
                 Your latest recorded sales
               </p>
+
             </div>
 
-            <Link to="/transactions">
-              View all
+
+            <Link
+              to="/transactions"
+              className="view-all-link"
+            >
+              <span>
+                View all
+              </span>
+
               <FiArrowUpRight />
+
             </Link>
 
           </div>
 
 
+          {/* =================================
+              LOADING
+          ================================= */}
+
           {loading ? (
 
-            <div className="empty-state">
+            <div className="loading-container">
+
+              <div className="loading-spinner" />
+
               <p>
                 Loading transactions...
               </p>
+
             </div>
+
 
           ) : recentTransactions.length ===
             0 ? (
+
+            /* =================================
+               EMPTY STATE
+            ================================= */
 
             <div className="empty-state">
 
@@ -377,8 +418,8 @@ const Dashboard = () => {
               </h3>
 
               <p>
-                Start recording your first
-                sale to see it here.
+                Start recording your first sale
+                to see your transactions here.
               </p>
 
               <Link
@@ -386,19 +427,30 @@ const Dashboard = () => {
                 className="primary-button"
               >
                 <FiPlus />
-                Record Sale
+
+                <span>
+                  Record Sale
+                </span>
+
               </Link>
 
             </div>
 
+
           ) : (
+
+            /* =================================
+               TRANSACTION TABLE
+            ================================= */
 
             <div className="recent-table-wrapper">
 
               <table className="transaction-table">
 
                 <thead>
+
                   <tr>
+
                     <th>
                       Product
                     </th>
@@ -418,8 +470,11 @@ const Dashboard = () => {
                     <th>
                       Date
                     </th>
+
                   </tr>
+
                 </thead>
+
 
                 <tbody>
 
@@ -432,60 +487,75 @@ const Dashboard = () => {
                         }
                       >
 
+                        {/* PRODUCT */}
+
                         <td>
+
                           <div className="product-cell">
+
                             <div className="product-avatar">
                               {transaction.productName
-                                ?.charAt(
-                                  0
-                                )
-                                ?.toUpperCase()}
+                                ?.charAt(0)
+                                ?.toUpperCase() ||
+                                "P"}
                             </div>
 
-                            <strong>
-                              {
-                                transaction.productName
-                              }
-                            </strong>
+                            <div>
+
+                              <strong>
+                                {
+                                  transaction.productName
+                                }
+                              </strong>
+
+                            </div>
+
                           </div>
+
                         </td>
 
-                        <td>
-                          {
-                            transaction.quantity
-                          }
-                        </td>
+
+                        {/* QUANTITY */}
 
                         <td>
+                          {transaction.quantity}
+                        </td>
+
+
+                        {/* AMOUNT */}
+
+                        <td>
+
                           <strong>
                             {formatCurrency(
                               transaction.totalAmount
                             )}
                           </strong>
+
                         </td>
 
+
+                        {/* PAYMENT */}
+
                         <td>
-                          <span className="payment-badge">
-                            {
+
+                          <span
+                            className={`payment-badge payment-${transaction.paymentMethod}`}
+                          >
+                            {formatPaymentMethod(
                               transaction.paymentMethod
-                            }
+                            )}
                           </span>
+
                         </td>
 
-                        <td>
-                          <div className="date-cell">
-                            <span>
-                              {formatDate(
-                                transaction.createdAt
-                              )}
-                            </span>
 
-                            <small>
-                              {formatTime(
-                                transaction.createdAt
-                              )}
-                            </small>
-                          </div>
+                        {/* DATE */}
+
+                        <td>
+                          {formatDate(
+                            transaction.createdAt
+                          )}
                         </td>
 
                       </tr>
@@ -502,6 +572,47 @@ const Dashboard = () => {
           )}
 
         </section>
+
+
+        {/* =================================
+            QUICK ACTION
+        ================================= */}
+
+        {!loading &&
+          transactions.length > 0 && (
+            <section className="dashboard-quick-action">
+
+              <div className="quick-action-icon">
+                <FiShoppingBag />
+              </div>
+
+              <div className="quick-action-content">
+
+                <h3>
+                  Ready to record another sale?
+                </h3>
+
+                <p>
+                  Quickly add a new transaction
+                  to your sales records.
+                </p>
+
+              </div>
+
+              <Link
+                to="/transactions"
+                className="secondary-button"
+              >
+                <FiPlus />
+
+                <span>
+                  Add Sale
+                </span>
+
+              </Link>
+
+            </section>
+          )}
 
       </main>
 
