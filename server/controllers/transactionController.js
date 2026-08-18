@@ -47,9 +47,13 @@ export const createTransaction = async (req, res) => {
 
 export const getTransactions = async (req, res) => {
   try {
+    console.log("AUTH USER ID:", req.user._id);
+
     const transactions = await Transaction.find({
       user: req.user._id,
     }).sort({ createdAt: -1 });
+
+    console.log("FOUND:", transactions.length);
 
     res.json({
       count: transactions.length,
@@ -63,7 +67,6 @@ export const getTransactions = async (req, res) => {
     });
   }
 };
-
 export const getTransactionById = async (req, res) => {
   try {
     const transaction = await Transaction.findOne({
