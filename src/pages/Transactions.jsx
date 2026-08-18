@@ -1,53 +1,43 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FiPlus,
   FiSearch,
   FiEdit2,
   FiTrash2,
-  FiX,
+  FiRefreshCw,
+  FiShoppingBag,
 } from "react-icons/fi";
 import api from "../services/api";
+import TransactionModel from "../components/TransactionModel";
 
 const Transactions = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+
+  const [search, setSearch] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("all");
 
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] =
     useState(null);
 
-  const [search, setSearch] = useState("");
-  const [error, setError] = useState("");
-
-  const [formData, setFormData] = useState({
-    productName: "",
-    quantity: "",
-    unitPrice: "",
-    paymentMethod: "cash",
-  });
-
-  // -----------------------------
+  // ===============================
   // FETCH TRANSACTIONS
-  // -----------------------------
+  // ===============================
 
   const fetchTransactions = async () => {
     try {
       setLoading(true);
-      setError("");
 
       const response = await api.get("/transactions");
 
-      setTransactions(response.data.transactions || []);
+      setTransactions(
+        response.data.transactions || []
+      );
     } catch (error) {
       console.error(
         "Failed to fetch transactions:",
         error
-      );
-
-      setError(
-        error.response?.data?.message ||
-          "Unable to load transactions."
       );
     } finally {
       setLoading(false);
@@ -58,113 +48,77 @@ const Transactions = () => {
     fetchTransactions();
   }, []);
 
-  // -----------------------------
-  // FORM
-  // -----------------------------
+  // ===============================
+  // FILTER TRANSACTIONS
+  // ===============================
 
-  const handleChange = (e) => {
-    setFormData((previous) => ({
-      ...previous,
-      [e.target.name]: e.target.value,
-    }));
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((transaction) => {
+      const productName =
+        transaction.productName || "";
+
+      const matchesSearch = productName
+        .toLowerCase()
+        .includes(search.toLowerCase());
+
+      const matchesPayment =
+        paymentFilter === "all" ||
+        transaction.paymentMethod === paymentFilter;
+
+      return matchesSearch && matchesPayment;
+    });
+  }, [
+    transactions,
+    search,
+    paymentFilter,
+  ]);
+
+  // ===============================
+  // FORMATTING
+  // ===============================
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency: "NGN",
+      maximumFractionDigits: 0,
+    }).format(Number(amount) || 0);
   };
 
-  const resetForm = () => {
-    setFormData({
-      productName: "",
-      quantity: "",
-      unitPrice: "",
-      paymentMethod: "cash",
-    });
+  const formatDate = (date) => {
+    if (!date) return "-";
 
+    return new Date(date).toLocaleDateString(
+      "en-NG",
+      {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }
+    );
+  };
+
+  // ===============================
+  // CREATE
+  // ===============================
+
+  const handleCreate = () => {
     setEditingTransaction(null);
-    setError("");
-  };
-
-  const openCreateModal = () => {
-    resetForm();
     setShowModal(true);
   };
 
-  const openEditModal = (transaction) => {
+  // ===============================
+  // EDIT
+  // ===============================
+
+  const handleEdit = (transaction) => {
     setEditingTransaction(transaction);
-
-    setFormData({
-      productName: transaction.productName,
-      quantity: transaction.quantity,
-      unitPrice: transaction.unitPrice,
-      paymentMethod: transaction.paymentMethod,
-    });
-
-    setError("");
     setShowModal(true);
   };
 
-  const closeModal = () => {
-    if (saving) return;
-
-    setShowModal(false);
-    resetForm();
-  };
-
-  // -----------------------------
-  // CREATE / UPDATE
-  // -----------------------------
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    try {
-      setSaving(true);
-      setError("");
-
-      const payload = {
-        productName: formData.productName.trim(),
-        quantity: Number(formData.quantity),
-        unitPrice: Number(formData.unitPrice),
-        paymentMethod: formData.paymentMethod,
-      };
-
-      if (
-        !payload.productName ||
-        payload.quantity < 1 ||
-        payload.unitPrice < 0
-      ) {
-        setError("Please enter valid transaction details.");
-        return;
-      }
-
-      if (editingTransaction) {
-        await api.put(
-          `/transactions/${editingTransaction._id}`,
-          payload
-        );
-      } else {
-        await api.post("/transactions", payload);
-      }
-
-      await fetchTransactions();
-
-      setShowModal(false);
-      resetForm();
-    } catch (error) {
-      console.error(
-        "Failed to save transaction:",
-        error
-      );
-
-      setError(
-        error.response?.data?.message ||
-          "Unable to save transaction."
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // -----------------------------
+  // ===============================
   // DELETE
-  // -----------------------------
+  // ===============================
 
   const handleDelete = async (id) => {
     const confirmed = window.confirm(
@@ -174,8 +128,6 @@ const Transactions = () => {
     if (!confirmed) return;
 
     try {
-      setError("");
-
       await api.delete(`/transactions/${id}`);
 
       await fetchTransactions();
@@ -185,91 +137,65 @@ const Transactions = () => {
         error
       );
 
-      setError(
+      alert(
         error.response?.data?.message ||
           "Unable to delete transaction."
       );
     }
   };
 
-  // -----------------------------
-  // SEARCH
-  // -----------------------------
+  // ===============================
+  // MODAL
+  // ===============================
 
-  const filteredTransactions = transactions.filter(
-    (transaction) => {
-      const product =
-        transaction.productName?.toLowerCase() || "";
-
-      const payment =
-        transaction.paymentMethod?.toLowerCase() || "";
-
-      const searchTerm = search.toLowerCase();
-
-      return (
-        product.includes(searchTerm) ||
-        payment.includes(searchTerm)
-      );
-    }
-  );
-
-  // -----------------------------
-  // HELPERS
-  // -----------------------------
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      maximumFractionDigits: 0,
-    }).format(amount);
+  const handleModalClose = () => {
+    setShowModal(false);
+    setEditingTransaction(null);
   };
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString("en-NG", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
+  const handleTransactionSaved = async () => {
+    handleModalClose();
+    await fetchTransactions();
   };
 
-  const calculatedTotal =
-    Number(formData.quantity || 0) *
-    Number(formData.unitPrice || 0);
-
-  // -----------------------------
-  // UI
-  // -----------------------------
+  // ===============================
+  // RENDER
+  // ===============================
 
   return (
     <div className="transactions-page">
 
-      {/* HEADER */}
+      {/* PAGE HEADER */}
 
       <div className="transactions-header">
 
         <div>
+          <p className="page-eyebrow">
+            Sales Management
+          </p>
+
           <h1>Transactions</h1>
 
-          <p>
-            Record and manage your POS sales.
+          <p className="page-description">
+            Record and manage your POS transactions.
           </p>
         </div>
 
         <button
+          type="button"
           className="primary-button"
-          onClick={openCreateModal}
+          onClick={handleCreate}
         >
           <FiPlus />
-          New Sale
+          New Transaction
         </button>
 
       </div>
 
 
-      {/* TOOLBAR */}
+      {/* FILTERS */}
 
-      <div className="transaction-toolbar">
+      <div className="transaction-filters">
 
         <div className="search-box">
 
@@ -277,75 +203,105 @@ const Transactions = () => {
 
           <input
             type="text"
-            placeholder="Search transactions..."
+            placeholder="Search products..."
             value={search}
-            onChange={(e) =>
-              setSearch(e.target.value)
+            onChange={(event) =>
+              setSearch(event.target.value)
             }
           />
 
         </div>
 
-        <span className="transaction-count">
-          {filteredTransactions.length} transaction
-          {filteredTransactions.length !== 1
-            ? "s"
-            : ""}
-        </span>
+
+        <select
+          value={paymentFilter}
+          onChange={(event) =>
+            setPaymentFilter(event.target.value)
+          }
+        >
+          <option value="all">
+            All payment methods
+          </option>
+
+          <option value="cash">
+            Cash
+          </option>
+
+          <option value="transfer">
+            Transfer
+          </option>
+
+          <option value="pos">
+            POS
+          </option>
+        </select>
+
+
+        <button
+          type="button"
+          className="refresh-button"
+          onClick={fetchTransactions}
+          disabled={loading}
+        >
+          <FiRefreshCw
+            className={loading ? "spin" : ""}
+          />
+
+          Refresh
+        </button>
 
       </div>
 
 
-      {/* ERROR */}
-
-      {error && !showModal && (
-        <div className="page-error">
-          {error}
-        </div>
-      )}
-
-
-      {/* CONTENT */}
+      {/* TRANSACTION TABLE */}
 
       <div className="transactions-card">
 
         {loading ? (
 
           <div className="transactions-empty">
-            <p>Loading transactions...</p>
+
+            <p>
+              Loading transactions...
+            </p>
+
           </div>
 
         ) : filteredTransactions.length === 0 ? (
 
           <div className="transactions-empty">
 
+            <div className="empty-icon">
+              <FiShoppingBag />
+            </div>
+
             <h3>
-              {search
-                ? "No matching transactions"
-                : "No transactions yet"}
+              No transactions found
             </h3>
 
             <p>
-              {search
-                ? "Try a different search term."
-                : "Record your first sale to get started."}
+              {search || paymentFilter !== "all"
+                ? "Try changing your search or filters."
+                : "Start recording your first sale."}
             </p>
 
-            {!search && (
-              <button
-                className="primary-button"
-                onClick={openCreateModal}
-              >
-                <FiPlus />
-                Record Sale
-              </button>
-            )}
+            {!search &&
+              paymentFilter === "all" && (
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={handleCreate}
+                >
+                  <FiPlus />
+                  Record Sale
+                </button>
+              )}
 
           </div>
 
         ) : (
 
-          <div className="transactions-table-wrapper">
+          <div className="table-wrapper">
 
             <table className="transaction-table">
 
@@ -368,7 +324,9 @@ const Transactions = () => {
                 {filteredTransactions.map(
                   (transaction) => (
 
-                    <tr key={transaction._id}>
+                    <tr
+                      key={transaction._id}
+                    >
 
                       <td>
                         <strong>
@@ -395,7 +353,9 @@ const Transactions = () => {
                       </td>
 
                       <td>
-                        <span className="payment-badge">
+                        <span
+                          className={`payment-badge ${transaction.paymentMethod}`}
+                        >
                           {transaction.paymentMethod}
                         </span>
                       </td>
@@ -411,23 +371,27 @@ const Transactions = () => {
                         <div className="table-actions">
 
                           <button
+                            type="button"
                             className="icon-button edit"
                             onClick={() =>
-                              openEditModal(transaction)
+                              handleEdit(
+                                transaction
+                              )
                             }
-                            title="Edit"
+                            title="Edit transaction"
                           >
                             <FiEdit2 />
                           </button>
 
                           <button
+                            type="button"
                             className="icon-button delete"
                             onClick={() =>
                               handleDelete(
                                 transaction._id
                               )
                             }
-                            title="Delete"
+                            title="Delete transaction"
                           >
                             <FiTrash2 />
                           </button>
@@ -452,186 +416,14 @@ const Transactions = () => {
       </div>
 
 
-      {/* MODAL */}
+      {/* CREATE / EDIT MODAL */}
 
       {showModal && (
-
-        <div className="modal-overlay">
-
-          <div className="transaction-modal">
-
-            <div className="modal-header">
-
-              <div>
-
-                <h2>
-                  {editingTransaction
-                    ? "Edit Transaction"
-                    : "Record New Sale"}
-                </h2>
-
-                <p>
-                  Enter the details of the transaction.
-                </p>
-
-              </div>
-
-              <button
-                className="modal-close"
-                onClick={closeModal}
-              >
-                <FiX />
-              </button>
-
-            </div>
-
-
-            {error && (
-              <div className="auth-error">
-                {error}
-              </div>
-            )}
-
-
-            <form
-              className="transaction-form"
-              onSubmit={handleSubmit}
-            >
-
-              <div className="form-group">
-
-                <label>
-                  Product name
-                </label>
-
-                <input
-                  className="standard-input"
-                  type="text"
-                  name="productName"
-                  placeholder="e.g. Maltina"
-                  value={formData.productName}
-                  onChange={handleChange}
-                  required
-                />
-
-              </div>
-
-
-              <div className="form-row">
-
-                <div className="form-group">
-
-                  <label>
-                    Quantity
-                  </label>
-
-                  <input
-                    className="standard-input"
-                    type="number"
-                    name="quantity"
-                    min="1"
-                    value={formData.quantity}
-                    onChange={handleChange}
-                    required
-                  />
-
-                </div>
-
-
-                <div className="form-group">
-
-                  <label>
-                    Unit price
-                  </label>
-
-                  <input
-                    className="standard-input"
-                    type="number"
-                    name="unitPrice"
-                    min="0"
-                    value={formData.unitPrice}
-                    onChange={handleChange}
-                    required
-                  />
-
-                </div>
-
-              </div>
-
-
-              <div className="form-group">
-
-                <label>
-                  Payment method
-                </label>
-
-                <select
-                  className="standard-input"
-                  name="paymentMethod"
-                  value={formData.paymentMethod}
-                  onChange={handleChange}
-                >
-                  <option value="cash">
-                    Cash
-                  </option>
-
-                  <option value="transfer">
-                    Bank Transfer
-                  </option>
-
-                  <option value="pos">
-                    POS
-                  </option>
-
-                </select>
-
-              </div>
-
-
-              <div className="total-preview">
-
-                <span>
-                  Total sale
-                </span>
-
-                <strong>
-                  {formatCurrency(calculatedTotal)}
-                </strong>
-
-              </div>
-
-
-              <div className="modal-actions">
-
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={closeModal}
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  className="primary-button"
-                  disabled={saving}
-                >
-                  {saving
-                    ? "Saving..."
-                    : editingTransaction
-                    ? "Update Sale"
-                    : "Record Sale"}
-                </button>
-
-              </div>
-
-            </form>
-
-          </div>
-
-        </div>
-
+        <TransactionModel
+          transaction={editingTransaction}
+          onClose={handleModalClose}
+          onSaved={handleTransactionSaved}
+        />
       )}
 
     </div>
