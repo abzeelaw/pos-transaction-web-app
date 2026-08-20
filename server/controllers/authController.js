@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import connectDB from "../config/db.js"; 
 
 const generateToken = (userId) => {
   return jwt.sign(
@@ -14,6 +15,8 @@ const generateToken = (userId) => {
 
 export const register = async (req, res) => {
   try {
+
+    await connectDB();
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
@@ -68,6 +71,8 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
+
+     await connectDB();
     const { email, password } = req.body;
 
     if (!email || !password) {
